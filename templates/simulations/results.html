@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Results</title>
+    {% load dict_filters %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .simulation-image {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .simulation-image img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .run-algorithm {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .run-algorithm:hover {
+            background-color: #218838;
+        }
+
+        .run-algorithm:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .error-plot {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .error-plot img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .back-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-button:hover {
+            background-color: #545b62;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .algorithm-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Simulation Results</h1>
+            <a href="/setup/" class="back-button">Back to Setup</a>
+        </div>
+
+        <!-- Simulation Visualization -->
+        <div class="panel">
+            <h2>Simulation Visualization</h2>
+            <div class="simulation-image">
+                <img src="data:image/png;base64,{{ simulation_plot }}" alt="Simulation Results">
+            </div>
+            <div class="algorithm-info">
+                <strong>Selected Algorithms:</strong>
+                {% for algo in selected_algorithms %}
+                {% with algo_info=algorithms|get_item:algo %}
+                {{ algo_info.name }}{% if not forloop.last %}, {% endif %}
+                {% endwith %}
+                {% endfor %}
+                <br>
+                <strong>Duration:</strong> {{ duration }} seconds
+            </div>
+        </div>
+
+        <!-- Algorithm Controls -->
+        <div class="panel">
+            <h2>Run Algorithms</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="algorithm-select">Algorithm:</label>
+                    <select id="algorithm-select">
+                        {% for algo in selected_algorithms %}
+                        <option value="{{ algo }}">{{ algorithms|get_item:algo|get_item:'name' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="time-point">Time Point:</label>
+                    <input type="number" id="time-point" min="0" max="{{ duration }}" step="1" value="0">
+                    <span>seconds (0-{{ duration }})</span>
+                </div>
+
+                <button id="run-algorithm" class="run-algorithm">Run Algorithm</button>
+            </div>
+
+            <div id="algorithm-status" class="status-message"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="results-section">
+            <div class="panel">
+                <h2>Algorithm Results</h2>
+                <div id="error-plot" class="error-plot">
+                </div>
+                <div id="results-info">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('run-algorithm').addEventListener('click', async function () {
+            const button = this;
+            const status = document.getElementById('algorithm-status');
+            const resultsSection = document.getElementById('results-section');
+            const errorPlot = document.getElementById('error-plot');
+            const resultsInfo = document.getElementById('results-info');
+
+            const algorithm = document.getElementById('algorithm-select').value;
+            const timePoint = document.getElementById('time-point').value;
+
+            button.disabled = true;
+            button.textContent = 'Running...';
+            status.style.display = 'none';
+
+            try {
+                const response = await fetch('/setup/run_algorithm/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        algorithm: algorithm,
+                        time_point: parseFloat(timePoint)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    errorPlot.innerHTML = `<img src="data:image/png;base64,${data.error_plot}" alt="Error Convergence">`;
+
+                    resultsInfo.innerHTML = `
+                        <div class="algorithm-info">
+                            <strong>Final Error:</strong> ${data.final_error.toFixed(6)}<br>
+                            <strong>Time Point:</strong> ${timePoint} seconds<br>
+                            <strong>Status:</strong> Completed successfully
+                        </div>
+                    `;
+
+                    resultsSection.style.display = 'block';
+
+                    status.className = 'status-message status-success';
+                    status.textContent = 'Algorithm completed successfully!';
+                    status.style.display = 'block';
+
+                } else {
+                    throw new Error(data.error);
+                }
+
+            } catch (error) {
+                status.className = 'status-message status-error';
+                status.textContent = 'Error: ' + error.message;
+                status.style.display = 'block';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run Algorithm';
+            }
+        });
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+
+</html>
