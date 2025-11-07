@@ -1,253 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulation Setup</title>
+    <title>Multi-Agent Tracking - Setup</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
 
         .container {
-            display: flex;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .panel {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            flex: 1;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .panel h2 {
-            margin-top: 0;
+        h1 {
             color: #333;
-            border-bottom: 2px solid #007cba;
-            padding-bottom: 10px;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        .algorithm-item {
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .algorithm-item:hover {
-            border-color: #007cba;
-            background-color: #f8f9fa;
-        }
-
-        .algorithm-item.selected {
-            border-color: #007cba;
-            background-color: #e3f2fd;
-        }
-
-        .algorithm-name {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .algorithm-desc {
-            color: #666;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-
-        .config-section {
+        .form-group {
             margin-bottom: 20px;
         }
 
-        .config-section label {
+        label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #333;
+            color: #555;
         }
 
-        .config-section input {
+        input,
+        select {
             width: 100%;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px;
         }
 
-        .run-button {
-            background-color: #007cba;
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button {
+            background-color: #007bff;
             color: white;
             padding: 12px 30px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 5px;
             cursor: pointer;
-            width: 100%;
-            transition: background-color 0.3s ease;
+            font-size: 16px;
+            margin-top: 20px;
         }
 
-        .run-button:hover {
-            background-color: #005a87;
+        button:hover {
+            background-color: #0056b3;
         }
 
-        .run-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        .form-row {
+            display: flex;
+            gap: 20px;
         }
 
-        .status-message {
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .status-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .form-row .form-group {
+            flex: 1;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="panel">
-            <h2>Select Algorithms</h2>
-            <div id="algorithms-list">
-                {% for algo_id, algo_info in algorithms.items %}
-                <div class="algorithm-item" data-algorithm="{{ algo_id }}">
-                    <div class="algorithm-name">{{ algo_info.name }}</div>
-                    <div class="algorithm-desc">{{ algo_info.description }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
+        <h1>Multi-Agent Tracking Simulation Setup</h1>
 
-        <div class="panel">
-            <h2>Simulation Configuration</h2>
-            <div class="config-section">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
                 <label for="duration">Simulation Duration (seconds):</label>
-                <input type="number" id="duration" min="1" max="{{ max_duration }}" value="{{ default_duration }}">
+                <input type="number" id="duration" name="duration" value="50" min="10" max="200" required>
             </div>
 
-            <div class="config-section">
-                <h3>Simulation Parameters</h3>
-                <p>Number of Sensors: 3</p>
-                <p>Number of Targets: 5 (3 linear, 2 random walk)</p>
-                <p>Area Size: 30x30 units</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="num_sensors">Number of Sensors:</label>
+                    <input type="number" id="num_sensors" name="num_sensors" value="3" min="1" max="10" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_linear_targets">Number of Linear Targets:</label>
+                    <input type="number" id="num_linear_targets" name="num_linear_targets" value="2" min="0" max="10"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_random_targets">Number of Random Walk Targets:</label>
+                    <input type="number" id="num_random_targets" name="num_random_targets" value="2" min="0" max="10"
+                        required>
+                </div>
             </div>
 
-            <button id="run-simulation" class="run-button">Run Simulation</button>
+            <div class="form-group">
+                <label>Algorithms to Analyze:</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
+                        <label for="original_spsa">Original SPSA</label>
+                    </div>
+                </div>
+            </div>
 
-            <div id="status-message" class="status-message"></div>
-        </div>
+            <button type="submit">Run Simulation</button>
+        </form>
     </div>
-
-    <script>
-        let selectedAlgorithms = [];
-
-        document.querySelectorAll('.algorithm-item').forEach(item => {
-            item.addEventListener('click', function () {
-                const algorithm = this.dataset.algorithm;
-                const index = selectedAlgorithms.indexOf(algorithm);
-
-                if (index > -1) {
-                    selectedAlgorithms.splice(index, 1);
-                    this.classList.remove('selected');
-                } else {
-                    selectedAlgorithms.push(algorithm);
-                    this.classList.add('selected');
-                }
-
-                updateRunButton();
-            });
-        });
-
-        function updateRunButton() {
-            const button = document.getElementById('run-simulation');
-            button.disabled = selectedAlgorithms.length === 0;
-        }
-
-        document.getElementById('run-simulation').addEventListener('click', async function () {
-            const button = this;
-            const status = document.getElementById('status-message');
-            const duration = document.getElementById('duration').value;
-
-            button.disabled = true;
-            button.textContent = 'Running Simulation...';
-            status.style.display = 'none';
-
-            try {
-                const response = await fetch('/setup/run/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        algorithms: selectedAlgorithms,
-                        duration: parseInt(duration)
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    status.className = 'status-message status-success';
-                    status.textContent = 'Simulation completed successfully! Redirecting...';
-                    status.style.display = 'block';
-
-                    setTimeout(() => {
-                        window.location.href = data.redirect_url;
-                    }, 1000);
-                } else {
-                    throw new Error(data.error);
-                }
-
-            } catch (error) {
-                status.className = 'status-message status-error';
-                status.textContent = 'Error: ' + error.message;
-                status.style.display = 'block';
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Run Simulation';
-            }
-        });
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        updateRunButton();
-    </script>
 </body>
 
 </html>

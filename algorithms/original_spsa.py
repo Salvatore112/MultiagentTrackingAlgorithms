@@ -36,7 +36,7 @@ class Original_SPSA:
 
         max_condition_number = 0
         while max_condition_number < 3:
-            weight = self._generate_matrix(3)
+            weight = self._generate_matrix(self.number_of_sensors)
             condition_number = self._condition_number(weight)
             if condition_number > max_condition_number:
                 max_condition_number = condition_number
