@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import pickle
 import hashlib
 
-
 from enum import Enum
 from matplotlib.animation import FuncAnimation, PillowWriter
 from dataclasses import dataclass
@@ -150,7 +149,7 @@ class Simulation:
     def calculate_distance(
         self, pos1: Tuple[float, float], pos2: Tuple[float, float]
     ) -> float:
-        return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+        return (pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2
 
     def get_target_position(self, obj: Target, time: float) -> Tuple[float, float]:
         if obj.movement_type == TARGET_TYPE.LINEAR:
@@ -512,80 +511,66 @@ class Simulation:
             )
 
     def get_spsa_input_data(
-        self, time_points: Optional[List[float]] = None
-    ) -> Dict[int, Tuple]:
-        if not self.simulation_data:
+        self,
+        time_points: Optional[List[float]] = None,
+        initial_estimates: Optional[Dict] = None,
+    ) -> Dict:
+        if not hasattr(self, "simulation_data") or not self.simulation_data:
             raise ValueError(
-                "Simulation must be run first before getting SPSA input data"
+                "Simulation must be run first. Call run_simulation() before this method."
             )
 
         if time_points is None:
             time_points = self.simulation_data["time_points"]
 
+        sensors_positions = {
+            sensor.id: np.array(sensor.position) for sensor in self.sensors
+        }
+
+        initial_estimates = {}
+        for target in self.targets:
+            initial_estimates[target.id] = {}
+            for sensor in self.sensors:
+                random_x = random.uniform(0, 50)
+                random_y = random.uniform(0, 50)
+                estimated_pos = np.array([random_x, random_y])
+                initial_estimates[target.id][sensor.id] = estimated_pos
+
         spsa_data = {}
 
-        for iteration, time in enumerate(time_points):
-            true_targets_position = {}
-            for target_id, target_obj in self.simulation_data["targets"].items():
-                true_pos = self.get_target_position_at_time(target_id, time)
-                true_targets_position[target_id] = np.array(true_pos)
+        for i, time in enumerate(time_points):
+            true_positions = {
+                target.id: np.array(self.get_target_position_at_time(target.id, time))
+                for target in self.targets
+            }
 
             distances = {}
-            for target_id in self.simulation_data["targets"].keys():
-                target_distances = {}
-                for sensor_id in self.simulation_data["sensors"].keys():
-                    distance = self.get_distance(sensor_id, target_id, time)
-                    target_distances[sensor_id] = distance
-                distances[target_id] = target_distances
+            for target in self.targets:
+                distances[target.id] = {}
+                for sensor in self.sensors:
+                    distance = self.get_distance(sensor.id, target.id, time)
+                    distances[target.id][sensor.id] = distance
 
-            spsa_data[iteration] = (true_targets_position, distances)
+            spsa_data[i] = [true_positions, distances]
 
-        return spsa_data
-
-    def get_initial_coordinates_for_spsa(self, area_size: float = 50) -> Dict:
-        random_state = random.getstate()
-
-        initial_coords = {}
-        for target_id in self.simulation_data["targets"].keys():
-            target_coords = {}
-            for sensor_id in self.simulation_data["sensors"].keys():
-                seed = hashlib.sha256(
-                    f"init_{target_id}_{sensor_id}".encode()
-                ).hexdigest()
-                random.seed(seed)
-
-                target_obj = self.simulation_data["targets"][target_id]
-                noise_x = random.uniform(-area_size * 0.1, area_size * 0.1)
-                noise_y = random.uniform(-area_size * 0.1, area_size * 0.1)
-
-                initial_x = target_obj.initial_position[0] + noise_x
-                initial_y = target_obj.initial_position[1] + noise_y
-
-                target_coords[sensor_id] = np.array([initial_x, initial_y])
-
-            initial_coords[target_id] = target_coords
-
-        random.setstate(random_state)
-        return initial_coords
-
-    def get_sensor_positions_for_spsa(self) -> Dict:
-        sensor_positions = {}
-        for sensor_id, sensor in self.simulation_data["sensors"].items():
-            sensor_positions[sensor_id] = np.array(sensor.position)
-
-        return sensor_positions
+        return {
+            "sensors_positions": sensors_positions,
+            # They are always randomly generate by virtue of the nature of the algorithm
+            "init_coords": initial_estimates,
+            "data": spsa_data,
+        }
 
 
 if __name__ == "__main__":
     sim = Simulation(duration=50, time_step=1.0, output_dir="simulation_results")
 
     print("Adding random sensors...")
-    for i in range(1, 4):
+    for i in range(0, 3):
         pos = sim.add_uniform_sensor(i, area_size=30)
         print(f"Sensor {i}: position ({pos[0]:.1f}, {pos[1]:.1f})")
 
     print("\nAdding linear targets...")
-    for i in range(1, 4):
+    for i in range(0, 3):
         init_pos, velocity = sim.add_linear_target(i, area_size=30)
         print(
             f"Linear Target {i}: initial position ({init_pos[0]:.1f}, {init_pos[1]:.1f}), "
@@ -593,7 +578,7 @@ if __name__ == "__main__":
         )
 
     print("\nAdding random walk targets...")
-    for i in range(4, 6):
+    for i in range(3, 5):
         init_pos, velocity = sim.add_random_walk_target(i, area_size=30)
         print(
             f"Random Walk Target {i}: initial position ({init_pos[0]:.1f}, {init_pos[1]:.1f}), "
@@ -611,6 +596,9 @@ if __name__ == "__main__":
     print("\nCreating trajectory visualization...")
     sim.plot_trajectories()
 
+    print("\nCreating animation...")
+    sim.create_animation(interval=100, save_gif=True)
+
     print("\n" + "=" * 50)
     print("SPECIFIC DISTANCES AT SPECIFIC TIMES")
     print("=" * 50)
@@ -623,10 +611,10 @@ if __name__ == "__main__":
 
     random_times = [random.randint(0, 50) for _ in range(3)]
     for time in random_times:
-        distance1 = sim.get_distance(1, 1, time)
-        distance2 = sim.get_distance(2, 4, time)
+        distance1 = sim.get_distance(0, 0, time)
+        distance2 = sim.get_distance(1, 3, time)
         print(
-            f"Time t={time}: Sensor1->Target1(linear): {distance1:.2f}, Sensor2->Target4(random): {distance2:.2f}"
+            f"Time t={time}: Sensor0->Target0(linear): {distance1:.2f}, Sensor1->Target3(random): {distance2:.2f}"
         )
 
     print("\n" + "=" * 50)
@@ -635,26 +623,26 @@ if __name__ == "__main__":
 
     times_to_check = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
-    print("\nRandom Walk Target 4 distances over time:")
-    print("Time | Sensor1 | Sensor2 | Sensor3 | Target Position")
+    print("\nRandom Walk Target 3 distances over time:")
+    print("Time | Sensor0 | Sensor1 | Sensor2 | Target Position")
     print("-" * 65)
     for time in times_to_check:
-        dist1 = sim.get_distance(1, 4, time)
-        dist2 = sim.get_distance(2, 4, time)
-        dist3 = sim.get_distance(3, 4, time)
-        pos = sim.get_target_position_at_time(4, time)
+        dist1 = sim.get_distance(0, 3, time)
+        dist2 = sim.get_distance(1, 3, time)
+        dist3 = sim.get_distance(2, 3, time)
+        pos = sim.get_target_position_at_time(3, time)
         print(
             f"{time:4.1f} | {dist1:7.2f} | {dist2:7.2f} | {dist3:7.2f} | ({pos[0]:6.1f}, {pos[1]:6.1f})"
         )
 
-    print("\nRandom Walk Target 5 distances over time:")
-    print("Time | Sensor1 | Sensor2 | Sensor3 | Target Position")
+    print("\nRandom Walk Target 4 distances over time:")
+    print("Time | Sensor0 | Sensor1 | Sensor2 | Target Position")
     print("-" * 65)
     for time in times_to_check:
-        dist1 = sim.get_distance(1, 5, time)
-        dist2 = sim.get_distance(2, 5, time)
-        dist3 = sim.get_distance(3, 5, time)
-        pos = sim.get_target_position_at_time(5, time)
+        dist1 = sim.get_distance(0, 4, time)
+        dist2 = sim.get_distance(1, 4, time)
+        dist3 = sim.get_distance(2, 4, time)
+        pos = sim.get_target_position_at_time(4, time)
         print(
             f"{time:4.1f} | {dist1:7.2f} | {dist2:7.2f} | {dist3:7.2f} | ({pos[0]:6.1f}, {pos[1]:6.1f})"
         )
@@ -663,24 +651,14 @@ if __name__ == "__main__":
     print("GENERATING SPSA INPUT DATA")
     print("=" * 50)
 
-    spsa_input_data = sim.get_spsa_input_data()
-    sensor_positions = sim.get_sensor_positions_for_spsa()
-    initial_coords = sim.get_initial_coordinates_for_spsa()
+    spsa_input = sim.get_spsa_input_data()
+    print(f"Generated SPSA input with {len(spsa_input['data'])} time iterations")
+    print(f"Sensors positions: {spsa_input['sensors_positions']}")
+    print(f"Initial estimates shape: {len(spsa_input['init_coords'])} targets")
 
-    print(
-        f"Generated SPSA input data for {len(spsa_input_data)} iterations: {spsa_input_data}"
-    )
-    print(
-        f"Number of sensors: {len(sensor_positions)}. Their positions are: {sensor_positions}"
-    )
-    print(
-        f"Number of targets: {len(initial_coords)} randomly generated coords for them: {initial_coords}"
-    )
-
-    first_iter = list(spsa_input_data.keys())[0]
-    true_positions, distances = spsa_input_data[first_iter]
-    print(
-        f"\nFirst iteration (time={sim.simulation_data['time_points'][first_iter]:.1f}s):"
-    )
-    print(f"True positions: {true_positions}")
-    print(f"Distances for target 1: {distances.get(1, {})}")
+    print("\nExample usage with SPSA:")
+    print("spsa = SPSA(")
+    print("    sensors_positions=spsa_input['sensors_positions'],")
+    print("    init_coords=spsa_input['init_coords']")
+    print(")")
+    print("results = spsa.run_n_iterations(spsa_input['data'])")
