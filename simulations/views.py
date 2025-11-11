@@ -1,17 +1,16 @@
 import numpy as np
 import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import io
 import base64
+
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .simulation import Simulation
 from algorithms.original_spsa import Original_SPSA
-import json
 
+matplotlib.use("Agg")
 
 def setup_view(request):
     if request.method == "POST":
