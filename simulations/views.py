@@ -5,21 +5,22 @@ import io
 import base64
 
 from django.shortcuts import render
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
 from django.urls import reverse
+from typing import Dict, List, Any, Optional, Tuple
 from .simulation import Simulation
 from algorithms.original_spsa import Original_SPSA
 
 matplotlib.use("Agg")
 
 
-def setup_view(request):
+def setup_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
-        duration = float(request.POST.get("duration", 50))
-        num_sensors = int(request.POST.get("num_sensors", 3))
-        num_linear_targets = int(request.POST.get("num_linear_targets", 2))
-        num_random_targets = int(request.POST.get("num_random_targets", 2))
-        algorithms = request.POST.getlist("algorithms")
+        duration: float = float(request.POST.get("duration", 50))
+        num_sensors: int = int(request.POST.get("num_sensors", 3))
+        num_linear_targets: int = int(request.POST.get("num_linear_targets", 2))
+        num_random_targets: int = int(request.POST.get("num_random_targets", 2))
+        algorithms: List[str] = request.POST.getlist("algorithms")
 
         request.session["simulation_params"] = {
             "duration": duration,
@@ -34,24 +35,24 @@ def setup_view(request):
     return render(request, "simulations/setup.html")
 
 
-def results_view(request):
-    params = request.session.get("simulation_params", {})
+def results_view(request: HttpRequest) -> HttpResponse:
+    params: Dict[str, Any] = request.session.get("simulation_params", {})
 
     if not params:
         return HttpResponseRedirect(reverse("setup"))
 
-    duration = params.get("duration", 50)
-    num_sensors = params.get("num_sensors", 3)
-    num_linear_targets = params.get("num_linear_targets", 2)
-    num_random_targets = params.get("num_random_targets", 2)
-    algorithms = params.get("algorithms", ["original_spsa"])
+    duration: float = params.get("duration", 50)
+    num_sensors: int = params.get("num_sensors", 3)
+    num_linear_targets: int = params.get("num_linear_targets", 2)
+    num_random_targets: int = params.get("num_random_targets", 2)
+    algorithms: List[str] = params.get("algorithms", ["original_spsa"])
 
-    sim = Simulation(duration=duration, time_step=1.0)
+    sim: Simulation = Simulation(duration=duration, time_step=1.0)
 
     for i in range(num_sensors):
         sim.add_uniform_sensor(i, area_size=50)
 
-    target_id = 0
+    target_id: int = 0
     for i in range(num_linear_targets):
         sim.add_linear_target(target_id, area_size=50)
         target_id += 1
@@ -61,11 +62,11 @@ def results_view(request):
         target_id += 1
 
     sim.run_simulation()
-    spsa_input = sim.get_spsa_input_data()
+    spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
 
-    results = {}
+    results: Dict[str, Any] = {}
     if "original_spsa" in algorithms:
-        test_obj = Original_SPSA(
+        test_obj: Original_SPSA = Original_SPSA(
             sensors_positions=spsa_input["sensors_positions"],
             true_targets_position=spsa_input["data"][0][0],
             distances=spsa_input["data"][0][1],
@@ -73,9 +74,9 @@ def results_view(request):
         )
         results["original_spsa"] = test_obj.run_n_iterations(data=spsa_input["data"])
 
-    plots_data = generate_plots(sim, results, spsa_input)
+    plots_data: Dict[str, str] = generate_plots(sim, results, spsa_input)
 
-    context = {
+    context: Dict[str, Any] = {
         "plots": plots_data,
         "results": results,
         "sensors": list(range(num_sensors)),
@@ -83,30 +84,30 @@ def results_view(request):
         "simulation_params": params,
     }
 
-    selected_sensor = request.GET.get("sensor")
+    selected_sensor: Optional[str] = request.GET.get("sensor")
     if selected_sensor is not None and selected_sensor != "":
-        selected_sensor = int(selected_sensor)
-        sensor_plots = generate_sensor_plots(sim, results, spsa_input, selected_sensor)
+        selected_sensor_int: int = int(selected_sensor)
+        sensor_plots: Dict[str, str] = generate_sensor_plots(sim, results, spsa_input, selected_sensor_int)
         context["sensor_plots"] = sensor_plots
-        context["selected_sensor"] = selected_sensor
+        context["selected_sensor"] = selected_sensor_int
 
     return render(request, "simulations/results.html", context)
 
 
-def generate_plots(sim, results, spsa_input):
-    plots = {}
+def generate_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any]) -> Dict[str, str]:
+    plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
 
-    colors = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
+    colors: np.ndarray = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
 
     for i, target in enumerate(sim.targets):
-        positions = [
+        positions: List[Any] = [
             sim.get_target_position(target, t)
             for t in sim.simulation_data["time_points"]
         ]
-        x_vals = [p[0] for p in positions]
-        y_vals = [p[1] for p in positions]
+        x_vals: List[float] = [p[0] for p in positions]
+        y_vals: List[float] = [p[1] for p in positions]
         plt.plot(
             x_vals,
             y_vals,
@@ -140,14 +141,14 @@ def generate_plots(sim, results, spsa_input):
 
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
-            target_estimates = []
+            target_estimates: List[np.ndarray] = []
             for time_iter in algorithm_results.values():
-                estimates_at_time = time_iter[1][target_id]
-                avg_estimate = np.mean(list(estimates_at_time.values()), axis=0)
+                estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
+                avg_estimate: np.ndarray = np.mean(list(estimates_at_time.values()), axis=0)
                 target_estimates.append(avg_estimate)
 
-            x_vals = [est[0] for est in target_estimates]
-            y_vals = [est[1] for est in target_estimates]
+            x_vals: List[float] = [est[0] for est in target_estimates]
+            y_vals: List[float] = [est[1] for est in target_estimates]
 
             plt.plot(
                 x_vals,
@@ -248,7 +249,7 @@ def generate_plots(sim, results, spsa_input):
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
 
-    buffer = io.BytesIO()
+    buffer: io.BytesIO = io.BytesIO()
     plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
     buffer.seek(0)
     plots["trajectories"] = base64.b64encode(buffer.getvalue()).decode()
@@ -257,21 +258,21 @@ def generate_plots(sim, results, spsa_input):
     plt.figure(figsize=(12, 8))
 
     for algorithm_name, algorithm_results in results.items():
-        errors_over_time = {
+        errors_over_time: Dict[int, List[float]] = {
             target_id: [] for target_id in algorithm_results[0][0].keys()
         }
 
         for time_iter in algorithm_results.values():
-            true_positions = time_iter[0]
-            estimates = time_iter[1]
+            true_positions: Dict[int, np.ndarray] = time_iter[0]
+            estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
 
             for target_id, true_pos in true_positions.items():
-                sensor_estimates = estimates[target_id]
-                errors = []
+                sensor_estimates: Dict[int, np.ndarray] = estimates[target_id]
+                errors: List[float] = []
                 for sensor_est in sensor_estimates.values():
-                    error = np.linalg.norm(sensor_est - true_pos)
+                    error: float = np.linalg.norm(sensor_est - true_pos)
                     errors.append(error)
-                avg_error = np.mean(errors)
+                avg_error: float = np.mean(errors)
                 errors_over_time[target_id].append(avg_error)
 
         for target_id, errors in errors_over_time.items():
@@ -299,20 +300,20 @@ def generate_plots(sim, results, spsa_input):
     return plots
 
 
-def generate_sensor_plots(sim, results, spsa_input, sensor_id):
-    plots = {}
+def generate_sensor_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any], sensor_id: int) -> Dict[str, str]:
+    plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
 
-    colors = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
+    colors: np.ndarray = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
 
     for i, target in enumerate(sim.targets):
-        positions = [
+        positions: List[Any] = [
             sim.get_target_position(target, t)
             for t in sim.simulation_data["time_points"]
         ]
-        x_vals = [p[0] for p in positions]
-        y_vals = [p[1] for p in positions]
+        x_vals: List[float] = [p[0] for p in positions]
+        y_vals: List[float] = [p[1] for p in positions]
         plt.plot(
             x_vals,
             y_vals,
@@ -346,15 +347,15 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
 
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
-            sensor_estimates = []
+            sensor_estimates: List[np.ndarray] = []
             for time_iter in algorithm_results.values():
-                estimates_at_time = time_iter[1][target_id]
+                estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
                 if sensor_id in estimates_at_time:
                     sensor_estimates.append(estimates_at_time[sensor_id])
 
             if sensor_estimates:
-                x_vals = [est[0] for est in sensor_estimates]
-                y_vals = [est[1] for est in sensor_estimates]
+                x_vals: List[float] = [est[0] for est in sensor_estimates]
+                y_vals: List[float] = [est[1] for est in sensor_estimates]
 
                 plt.plot(
                     x_vals,
@@ -388,7 +389,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                     zorder=5,
                 )
 
-    sensor_pos = None
+    sensor_pos: Optional[Tuple[float, float]] = None
     for sensor in sim.sensors:
         if sensor.id == sensor_id:
             sensor_pos = sensor.position
@@ -459,7 +460,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
 
-    buffer = io.BytesIO()
+    buffer: io.BytesIO = io.BytesIO()
     plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
     buffer.seek(0)
     plots["sensor_trajectories"] = base64.b64encode(buffer.getvalue()).decode()
@@ -468,18 +469,18 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
     plt.figure(figsize=(12, 8))
 
     for algorithm_name, algorithm_results in results.items():
-        errors_over_time = {
+        errors_over_time: Dict[int, List[float]] = {
             target_id: [] for target_id in algorithm_results[0][0].keys()
         }
 
         for time_iter in algorithm_results.values():
-            true_positions = time_iter[0]
-            estimates = time_iter[1]
+            true_positions: Dict[int, np.ndarray] = time_iter[0]
+            estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
 
             for target_id, true_pos in true_positions.items():
                 if sensor_id in estimates[target_id]:
-                    sensor_est = estimates[target_id][sensor_id]
-                    error = np.linalg.norm(sensor_est - true_pos)
+                    sensor_est: np.ndarray = estimates[target_id][sensor_id]
+                    error: float = np.linalg.norm(sensor_est - true_pos)
                     errors_over_time[target_id].append(error)
 
         for target_id, errors in errors_over_time.items():

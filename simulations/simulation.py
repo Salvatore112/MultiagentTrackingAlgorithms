@@ -10,14 +10,14 @@ import hashlib
 from enum import Enum
 from matplotlib.animation import FuncAnimation, PillowWriter
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 
 
 class TARGET_TYPE(Enum):
     LINEAR = 1
     RANDOM_WALK = 2
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self == TARGET_TYPE.LINEAR:
             return "lin"
         elif self == TARGET_TYPE.RANDOM_WALK:
@@ -30,8 +30,8 @@ class Target:
     id: int
     initial_position: Tuple[float, float]
     velocity: Tuple[float, float]
-    movement_type: str = TARGET_TYPE.LINEAR
-    random_walk_params: Optional[Dict] = None
+    movement_type: TARGET_TYPE = TARGET_TYPE.LINEAR
+    random_walk_params: Optional[Dict[str, float]] = None
     unique_hash: Optional[str] = None
 
 
@@ -47,16 +47,16 @@ class Simulation:
         duration: float,
         time_step: float = 1.0,
         output_dir: str = "simulation_results",
-    ):
-        self.duration = duration
-        self.time_step = time_step
+    ) -> None:
+        self.duration: float = duration
+        self.time_step: float = time_step
         self.sensors: List[Sensor] = []
         self.targets: List[Target] = []
-        self.simulation_data: Dict = {}
-        self.output_dir = output_dir
+        self.simulation_data: Dict[str, Any] = {}
+        self.output_dir: str = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def add_sensor(self, sensor_id: int, position: Tuple[float, float]):
+    def add_sensor(self, sensor_id: int, position: Tuple[float, float]) -> None:
         self.sensors.append(Sensor(sensor_id, position))
 
     def add_target(
@@ -64,10 +64,10 @@ class Simulation:
         obj_id: int,
         initial_position: Tuple[float, float],
         velocity: Tuple[float, float],
-        movement_type: str = TARGET_TYPE.LINEAR,
-        random_walk_params: Optional[Dict] = None,
-    ):
-        unique_hash = hashlib.sha256(
+        movement_type: TARGET_TYPE = TARGET_TYPE.LINEAR,
+        random_walk_params: Optional[Dict[str, float]] = None,
+    ) -> None:
+        unique_hash: str = hashlib.sha256(
             f"{obj_id}_{initial_position}_{velocity}_{movement_type}_{random_walk_params}".encode()
         ).hexdigest()
         self.targets.append(
@@ -81,17 +81,17 @@ class Simulation:
             )
         )
 
-    def add_linear_target(self, obj_id: int, area_size: float = 50):
-        seed = hashlib.sha256(f"linear_{obj_id}".encode()).hexdigest()
-        random_state = random.getstate()
+    def add_linear_target(self, obj_id: int, area_size: float = 50) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        seed: str = hashlib.sha256(f"linear_{obj_id}".encode()).hexdigest()
+        random_state: Any = random.getstate()
         random.seed(seed)
 
-        initial_x = random.uniform(-area_size, area_size)
-        initial_y = random.uniform(-area_size, area_size)
-        speed = random.uniform(0.5, 3.0)
-        angle = random.uniform(0, 2 * math.pi)
-        vx = speed * math.cos(angle)
-        vy = speed * math.sin(angle)
+        initial_x: float = random.uniform(-area_size, area_size)
+        initial_y: float = random.uniform(-area_size, area_size)
+        speed: float = random.uniform(0.5, 3.0)
+        angle: float = random.uniform(0, 2 * math.pi)
+        vx: float = speed * math.cos(angle)
+        vy: float = speed * math.sin(angle)
 
         random.setstate(random_state)
 
@@ -102,18 +102,18 @@ class Simulation:
         )
         return (initial_x, initial_y), (vx, vy)
 
-    def add_random_walk_target(self, obj_id: int, area_size: float = 50):
-        seed = hashlib.sha256(f"random_walk_{obj_id}".encode()).hexdigest()
-        random_state = random.getstate()
+    def add_random_walk_target(self, obj_id: int, area_size: float = 50) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        seed: str = hashlib.sha256(f"random_walk_{obj_id}".encode()).hexdigest()
+        random_state: Any = random.getstate()
         random.seed(seed)
 
-        initial_x = random.uniform(-area_size, area_size)
-        initial_y = random.uniform(-area_size, area_size)
-        speed = random.uniform(0.5, 2.0)
-        angle = random.uniform(0, 2 * math.pi)
-        vx = speed * math.cos(angle)
-        vy = speed * math.sin(angle)
-        random_walk_params = {
+        initial_x: float = random.uniform(-area_size, area_size)
+        initial_y: float = random.uniform(-area_size, area_size)
+        speed: float = random.uniform(0.5, 2.0)
+        angle: float = random.uniform(0, 2 * math.pi)
+        vx: float = speed * math.cos(angle)
+        vy: float = speed * math.sin(angle)
+        random_walk_params: Dict[str, float] = {
             "speed_variation": random.uniform(0.1, 0.5),
             "direction_change_prob": random.uniform(0.1, 0.3),
             "max_direction_change": math.pi / 4,
@@ -133,13 +133,13 @@ class Simulation:
         )
         return (initial_x, initial_y), (vx, vy)
 
-    def add_uniform_sensor(self, sensor_id: int, area_size: float = 50):
-        seed = hashlib.sha256(f"sensor_{sensor_id}".encode()).hexdigest()
-        random_state = random.getstate()
+    def add_uniform_sensor(self, sensor_id: int, area_size: float = 50) -> Tuple[float, float]:
+        seed: str = hashlib.sha256(f"sensor_{sensor_id}".encode()).hexdigest()
+        random_state: Any = random.getstate()
         random.seed(seed)
 
-        pos_x = random.uniform(-area_size, area_size)
-        pos_y = random.uniform(-area_size, area_size)
+        pos_x: float = random.uniform(-area_size, area_size)
+        pos_y: float = random.uniform(-area_size, area_size)
 
         random.setstate(random_state)
 
@@ -160,20 +160,22 @@ class Simulation:
             return self._get_linear_position(obj, time)
 
     def _get_linear_position(self, obj: Target, time: float) -> Tuple[float, float]:
-        x = obj.initial_position[0] + obj.velocity[0] * time
-        y = obj.initial_position[1] + obj.velocity[1] * time
+        x: float = obj.initial_position[0] + obj.velocity[0] * time
+        y: float = obj.initial_position[1] + obj.velocity[1] * time
         return (x, y)
 
     def _get_random_walk_position(
         self, obj: Target, time: float
     ) -> Tuple[float, float]:
-        random_state = random.getstate()
+        random_state: Any = random.getstate()
         random.seed(obj.unique_hash)
 
-        time_points = np.arange(0, time + self.time_step, self.time_step)
-        x, y = obj.initial_position
-        current_vx, current_vy = obj.velocity
-        params = obj.random_walk_params or {
+        time_points: np.ndarray = np.arange(0, time + self.time_step, self.time_step)
+        x: float = obj.initial_position[0]
+        y: float = obj.initial_position[1]
+        current_vx: float = obj.velocity[0]
+        current_vy: float = obj.velocity[1]
+        params: Dict[str, float] = obj.random_walk_params or {
             "speed_variation": 0.3,
             "direction_change_prob": 0.2,
             "max_direction_change": math.pi / 4,
@@ -181,17 +183,17 @@ class Simulation:
 
         for t in time_points[1:]:
             if random.random() < params["direction_change_prob"]:
-                angle_change = random.uniform(
+                angle_change: float = random.uniform(
                     -params["max_direction_change"], params["max_direction_change"]
                 )
-                current_speed = math.sqrt(current_vx**2 + current_vy**2)
-                current_angle = math.atan2(current_vy, current_vx)
-                new_angle = current_angle + angle_change
+                current_speed: float = math.sqrt(current_vx**2 + current_vy**2)
+                current_angle: float = math.atan2(current_vy, current_vx)
+                new_angle: float = current_angle + angle_change
 
-                speed_variation = random.uniform(
+                speed_variation: float = random.uniform(
                     1 - params["speed_variation"], 1 + params["speed_variation"]
                 )
-                new_speed = current_speed * speed_variation
+                new_speed: float = current_speed * speed_variation
 
                 current_vx = new_speed * math.cos(new_angle)
                 current_vy = new_speed * math.sin(new_angle)
@@ -203,8 +205,8 @@ class Simulation:
 
         return (x, y)
 
-    def run_simulation(self):
-        time_points = np.arange(0, self.duration + self.time_step, self.time_step)
+    def run_simulation(self) -> None:
+        time_points: np.ndarray = np.arange(0, self.duration + self.time_step, self.time_step)
 
         self.simulation_data = {
             "time_points": time_points,
@@ -218,11 +220,11 @@ class Simulation:
                 f"Time {time} is outside the simulation range [0, {self.duration}]"
             )
 
-        sensor = self.simulation_data["sensors"][sensor_id]
-        target_obj = self.simulation_data["targets"][target_id]
+        sensor: Sensor = self.simulation_data["sensors"][sensor_id]
+        target_obj: Target = self.simulation_data["targets"][target_id]
 
-        target_pos = self.get_target_position(target_obj, time)
-        distance = self.calculate_distance(sensor.position, target_pos)
+        target_pos: Tuple[float, float] = self.get_target_position(target_obj, time)
+        distance: float = self.calculate_distance(sensor.position, target_pos)
 
         return distance
 
@@ -234,39 +236,39 @@ class Simulation:
                 f"Time {time} is outside the simulation range [0, {self.duration}]"
             )
 
-        target_obj = self.simulation_data["targets"][target_id]
+        target_obj: Target = self.simulation_data["targets"][target_id]
         return self.get_target_position(target_obj, time)
 
-    def print_distances_at_time(self, time: float):
+    def print_distances_at_time(self, time: float) -> None:
         print(f"\n=== Distances at time t={time} seconds ===")
         for sensor in self.sensors:
             for obj in self.targets:
-                distance = self.get_distance(sensor.id, obj.id, time)
-                obj_pos = self.get_target_position_at_time(obj.id, time)
+                distance: float = self.get_distance(sensor.id, obj.id, time)
+                obj_pos: Tuple[float, float] = self.get_target_position_at_time(obj.id, time)
                 print(f"Sensor {sensor.id} -> Target {obj.id}: {distance:.2f} units")
                 print(
                     f"  Target {obj.id} position: ({obj_pos[0]:.1f}, {obj_pos[1]:.1f})"
                 )
 
-    def print_multiple_times(self, times: List[float]):
+    def print_multiple_times(self, times: List[float]) -> None:
         for time in times:
             self.print_distances_at_time(time)
 
-    def plot_trajectories(self, save_file: bool = True):
+    def plot_trajectories(self, save_file: bool = True) -> None:
         plt.figure(figsize=(12, 10))
 
-        obj_colors = list(mcolors.TABLEAU_COLORS.keys())
-        sensor_colors = ["red", "green", "blue", "purple", "orange", "brown"]
+        obj_colors: List[str] = list(mcolors.TABLEAU_COLORS.keys())
+        sensor_colors: List[str] = ["red", "green", "blue", "purple", "orange", "brown"]
 
         for i, obj in enumerate(self.targets):
-            color = obj_colors[i % len(obj_colors)]
+            color: str = obj_colors[i % len(obj_colors)]
 
-            positions = [
+            positions: List[Tuple[float, float]] = [
                 self.get_target_position(obj, t)
                 for t in self.simulation_data["time_points"]
             ]
-            x_vals = [p[0] for p in positions]
-            y_vals = [p[1] for p in positions]
+            x_vals: List[float] = [p[0] for p in positions]
+            y_vals: List[float] = [p[1] for p in positions]
 
             plt.plot(
                 x_vals,
@@ -299,7 +301,7 @@ class Simulation:
             )
 
             if len(positions) > 1 and obj.movement_type == TARGET_TYPE.LINEAR:
-                mid_idx = len(positions) // 2
+                mid_idx: int = len(positions) // 2
                 plt.annotate(
                     "",
                     xy=positions[mid_idx + 1],
@@ -308,7 +310,7 @@ class Simulation:
                 )
 
         for i, sensor in enumerate(self.sensors):
-            color = sensor_colors[i % len(sensor_colors)]
+            color: str = sensor_colors[i % len(sensor_colors)]
             plt.scatter(
                 sensor.position[0],
                 sensor.position[1],
@@ -338,41 +340,41 @@ class Simulation:
         plt.tight_layout()
 
         if save_file:
-            filename = os.path.join(self.output_dir, "trajectories.png")
+            filename: str = os.path.join(self.output_dir, "trajectories.png")
             plt.savefig(filename, dpi=300, bbox_inches="tight")
             print(f"Trajectories saved to: {filename}")
 
         plt.show()
 
-    def create_animation(self, interval: int = 100, save_gif: bool = True):
+    def create_animation(self, interval: int = 100, save_gif: bool = True) -> FuncAnimation:
         fig, ax = plt.subplots(figsize=(12, 10))
-        time_points = self.simulation_data["time_points"]
+        time_points: np.ndarray = self.simulation_data["time_points"]
 
         ax.set_xlabel("X coordinate")
         ax.set_ylabel("Y coordinate")
         ax.set_title("Target movement animation")
         ax.grid(True, alpha=0.3)
 
-        all_x = []
-        all_y = []
+        all_x: List[float] = []
+        all_y: List[float] = []
         for obj in self.targets:
-            positions = [self.get_target_position(obj, t) for t in time_points]
+            positions: List[Tuple[float, float]] = [self.get_target_position(obj, t) for t in time_points]
             all_x.extend([p[0] for p in positions])
             all_y.extend([p[1] for p in positions])
         for sensor in self.sensors:
             all_x.append(sensor.position[0])
             all_y.append(sensor.position[1])
 
-        margin = 5
+        margin: int = 5
         ax.set_xlim(min(all_x) - margin, max(all_x) + margin)
         ax.set_ylim(min(all_y) - margin, max(all_y) + margin)
 
-        obj_points = []
-        obj_trails = []
-        obj_colors = list(mcolors.TABLEAU_COLORS.keys())
+        obj_points: List[Any] = []
+        obj_trails: List[Any] = []
+        obj_colors: List[str] = list(mcolors.TABLEAU_COLORS.keys())
 
         for i, obj in enumerate(self.targets):
-            color = obj_colors[i % len(obj_colors)]
+            color: str = obj_colors[i % len(obj_colors)]
             (trail,) = ax.plot([], [], color=color, linewidth=2, alpha=0.5)
             (point,) = ax.plot(
                 [], [], color=color, marker="o", markersize=10, markeredgecolor="black"
@@ -388,9 +390,9 @@ class Simulation:
                 fontweight="bold",
             )
 
-        sensor_colors = ["red", "green", "blue", "purple", "orange", "brown"]
+        sensor_colors: List[str] = ["red", "green", "blue", "purple", "orange", "brown"]
         for i, sensor in enumerate(self.sensors):
-            color = sensor_colors[i % len(sensor_colors)]
+            color: str = sensor_colors[i % len(sensor_colors)]
             ax.scatter(
                 sensor.position[0],
                 sensor.position[1],
@@ -410,7 +412,7 @@ class Simulation:
                 fontweight="bold",
             )
 
-        time_text = ax.text(
+        time_text: Any = ax.text(
             0.02,
             0.95,
             "",
@@ -419,26 +421,26 @@ class Simulation:
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
         )
 
-        def animate(frame):
-            current_time = time_points[frame]
+        def animate(frame: int) -> List[Any]:
+            current_time: float = time_points[frame]
             time_text.set_text(f"Time: {current_time:.1f} sec")
 
             for i, obj in enumerate(self.targets):
-                trail_x = []
-                trail_y = []
+                trail_x: List[float] = []
+                trail_y: List[float] = []
                 for t in time_points[: frame + 1]:
-                    pos = self.get_target_position(obj, t)
+                    pos: Tuple[float, float] = self.get_target_position(obj, t)
                     trail_x.append(pos[0])
                     trail_y.append(pos[1])
 
                 obj_trails[i].set_data(trail_x, trail_y)
 
-                current_pos = self.get_target_position(obj, current_time)
+                current_pos: Tuple[float, float] = self.get_target_position(obj, current_time)
                 obj_points[i].set_data([current_pos[0]], [current_pos[1]])
 
             return obj_trails + obj_points + [time_text]
 
-        anim = FuncAnimation(
+        anim: FuncAnimation = FuncAnimation(
             fig,
             animate,
             frames=len(time_points),
@@ -452,7 +454,7 @@ class Simulation:
 
         if save_gif:
             try:
-                gif_filename = os.path.join(self.output_dir, "animation.gif")
+                gif_filename: str = os.path.join(self.output_dir, "animation.gif")
                 anim.save(
                     gif_filename, writer=PillowWriter(fps=1000 // interval), dpi=100
                 )
@@ -464,8 +466,8 @@ class Simulation:
 
         return anim
 
-    def save_simulation(self, filename: str = "simulation_data.pkl"):
-        filepath = os.path.join(self.output_dir, filename)
+    def save_simulation(self, filename: str = "simulation_data.pkl") -> None:
+        filepath: str = os.path.join(self.output_dir, filename)
         with open(filepath, "wb") as f:
             pickle.dump(
                 {
@@ -479,10 +481,10 @@ class Simulation:
             )
         print(f"Simulation saved to: {filepath}")
 
-    def load_simulation(self, filename: str = "simulation_data.pkl"):
-        filepath = os.path.join(self.output_dir, filename)
+    def load_simulation(self, filename: str = "simulation_data.pkl") -> None:
+        filepath: str = os.path.join(self.output_dir, filename)
         with open(filepath, "rb") as f:
-            data = pickle.load(f)
+            data: Dict[str, Any] = pickle.load(f)
             self.duration = data["duration"]
             self.time_step = data["time_step"]
             self.sensors = data["sensors"]
@@ -490,7 +492,7 @@ class Simulation:
             self.simulation_data = data["simulation_data"]
         print(f"Simulation loaded from: {filepath}")
 
-    def print_simulation_info(self):
+    def print_simulation_info(self) -> None:
         print(f"Simulation duration: {self.duration} seconds")
         print(f"Time step: {self.time_step} seconds")
         print(f"Number of sensors: {len(self.sensors)}")
@@ -502,7 +504,7 @@ class Simulation:
             )
         print("\nTargets:")
         for obj in self.targets:
-            movement_info = f", movement: {obj.movement_type}"
+            movement_info: str = f", movement: {obj.movement_type}"
             if obj.movement_type == TARGET_TYPE.RANDOM_WALK and obj.random_walk_params:
                 movement_info += f", params: {obj.random_walk_params}"
             print(
@@ -513,8 +515,8 @@ class Simulation:
     def get_spsa_input_data(
         self,
         time_points: Optional[List[float]] = None,
-        initial_estimates: Optional[Dict] = None,
-    ) -> Dict:
+        initial_estimates: Optional[Dict[int, Dict[int, np.ndarray]]] = None,
+    ) -> Dict[str, Any]:
         if not hasattr(self, "simulation_data") or not self.simulation_data:
             raise ValueError(
                 "Simulation must be run first. Call run_simulation() before this method."
@@ -523,7 +525,7 @@ class Simulation:
         if time_points is None:
             time_points = self.simulation_data["time_points"]
 
-        sensors_positions = {
+        sensors_positions: Dict[int, np.ndarray] = {
             sensor.id: np.array(sensor.position) for sensor in self.sensors
         }
 
@@ -531,24 +533,24 @@ class Simulation:
         for target in self.targets:
             initial_estimates[target.id] = {}
             for sensor in self.sensors:
-                random_x = random.uniform(0, 50)
-                random_y = random.uniform(0, 50)
-                estimated_pos = np.array([random_x, random_y])
+                random_x: float = random.uniform(0, 50)
+                random_y: float = random.uniform(0, 50)
+                estimated_pos: np.ndarray = np.array([random_x, random_y])
                 initial_estimates[target.id][sensor.id] = estimated_pos
 
-        spsa_data = {}
+        spsa_data: Dict[int, Any] = {}
 
         for i, time in enumerate(time_points):
-            true_positions = {
+            true_positions: Dict[int, np.ndarray] = {
                 target.id: np.array(self.get_target_position_at_time(target.id, time))
                 for target in self.targets
             }
 
-            distances = {}
+            distances: Dict[int, Dict[int, float]] = {}
             for target in self.targets:
                 distances[target.id] = {}
                 for sensor in self.sensors:
-                    distance = self.get_distance(sensor.id, target.id, time)
+                    distance: float = self.get_distance(sensor.id, target.id, time)
                     distances[target.id][sensor.id] = distance
 
             spsa_data[i] = [true_positions, distances]
