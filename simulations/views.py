@@ -119,22 +119,24 @@ def generate_plots(sim, results, spsa_input):
             x_vals[0],
             y_vals[0],
             color=colors[i],
-            s=150,
-            marker="o",
+            s=180,
+            marker="D",
             edgecolors="black",
+            linewidth=2,
             zorder=5,
-            label=f"Target {target.id} Start",
+            label=f"Target {target.id} Start (Real)" if i == 0 else "",
         )
         
         plt.scatter(
             x_vals[-1],
             y_vals[-1],
             color=colors[i],
-            s=150,
-            marker="s",
+            s=180,
+            marker="X",
             edgecolors="black",
+            linewidth=2,
             zorder=5,
-            label=f"Target {target.id} End",
+            label=f"Target {target.id} End (Real)" if i == 0 else "",
         )
 
     for algorithm_name, algorithm_results in results.items():
@@ -147,10 +149,12 @@ def generate_plots(sim, results, spsa_input):
 
             x_vals = [est[0] for est in target_estimates]
             y_vals = [est[1] for est in target_estimates]
+            
             plt.plot(
                 x_vals,
                 y_vals,
                 "--",
+                color=colors[target_id],
                 linewidth=2,
                 label=f"Target {target_id} ({algorithm_name} Est.)",
                 alpha=0.8,
@@ -159,21 +163,25 @@ def generate_plots(sim, results, spsa_input):
             plt.scatter(
                 x_vals[0],
                 y_vals[0],
-                color=colors[target_id % len(colors)],
-                s=100,
-                marker="o",
+                color=colors[target_id],
+                s=120,
+                marker="s",
                 edgecolors="black",
+                linewidth=2,
                 zorder=5,
+                label=f"Target {target_id} Start ({algorithm_name})" if target_id == 0 else "",
             )
             
             plt.scatter(
                 x_vals[-1],
                 y_vals[-1],
-                color=colors[target_id % len(colors)],
-                s=100,
-                marker="s",
+                color=colors[target_id],
+                s=120,
+                marker="o",
                 edgecolors="black",
+                linewidth=2,
                 zorder=5,
+                label=f"Target {target_id} End ({algorithm_name})" if target_id == 0 else "",
             )
 
     for i, sensor in enumerate(sim.sensors):
@@ -197,7 +205,7 @@ def generate_plots(sim, results, spsa_input):
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
-    plt.title("True Trajectories and Algorithm Estimates (with Start/End Points)")
+    plt.title("True Trajectories and Algorithm Estimates")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -232,6 +240,7 @@ def generate_plots(sim, results, spsa_input):
             plt.plot(
                 range(len(errors)),
                 errors,
+                color=colors[target_id],
                 label=f"Target {target_id} ({algorithm_name})",
                 linewidth=2,
             )
@@ -279,22 +288,24 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             x_vals[0],
             y_vals[0],
             color=colors[i],
-            s=150,
-            marker="o",
+            s=180,
+            marker="D",
             edgecolors="black",
+            linewidth=2,
             zorder=5,
-            label=f"Target {target.id} Start",
+            label=f"Target {target.id} Start (Real)" if i == 0 else "",
         )
         
         plt.scatter(
             x_vals[-1],
             y_vals[-1],
             color=colors[i],
-            s=150,
-            marker="s",
+            s=180,
+            marker="X",
             edgecolors="black",
+            linewidth=2,
             zorder=5,
-            label=f"Target {target.id} End",
+            label=f"Target {target.id} End (Real)" if i == 0 else "",
         )
 
     for algorithm_name, algorithm_results in results.items():
@@ -308,10 +319,12 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             if sensor_estimates:
                 x_vals = [est[0] for est in sensor_estimates]
                 y_vals = [est[1] for est in sensor_estimates]
+                
                 plt.plot(
                     x_vals,
                     y_vals,
                     "--",
+                    color=colors[target_id],
                     linewidth=2,
                     label=f"Target {target_id} (Sensor {sensor_id} Est.)",
                     alpha=0.8,
@@ -320,21 +333,25 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                 plt.scatter(
                     x_vals[0],
                     y_vals[0],
-                    color=colors[target_id % len(colors)],
-                    s=100,
-                    marker="o",
+                    color=colors[target_id],
+                    s=120,
+                    marker="s",
                     edgecolors="black",
+                    linewidth=2,
                     zorder=5,
+                    label=f"Target {target_id} Start ({algorithm_name})" if target_id == 0 else "",
                 )
                 
                 plt.scatter(
                     x_vals[-1],
                     y_vals[-1],
-                    color=colors[target_id % len(colors)],
-                    s=100,
-                    marker="s",
+                    color=colors[target_id],
+                    s=120,
+                    marker="o",
                     edgecolors="black",
+                    linewidth=2,
                     zorder=5,
+                    label=f"Target {target_id} End ({algorithm_name})" if target_id == 0 else "",
                 )
 
     sensor_pos = None
@@ -362,7 +379,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
-    plt.title(f"True Trajectories and Sensor {sensor_id} Estimates (with Start/End Points)")
+    plt.title(f"True Trajectories and Sensor {sensor_id} Estimates")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -395,6 +412,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                 plt.plot(
                     range(len(errors)),
                     errors,
+                    color=colors[target_id],
                     label=f"Target {target_id} (Sensor {sensor_id})",
                     linewidth=2,
                 )
