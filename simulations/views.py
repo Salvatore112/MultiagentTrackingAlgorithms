@@ -12,6 +12,7 @@ from algorithms.original_spsa import Original_SPSA
 
 matplotlib.use("Agg")
 
+
 def setup_view(request):
     if request.method == "POST":
         duration = float(request.POST.get("duration", 50))
@@ -114,7 +115,7 @@ def generate_plots(sim, results, spsa_input):
             label=f"Target {target.id} (True)",
             alpha=0.7,
         )
-        
+
         plt.scatter(
             x_vals[0],
             y_vals[0],
@@ -125,7 +126,7 @@ def generate_plots(sim, results, spsa_input):
             linewidth=2,
             zorder=5,
         )
-        
+
         plt.scatter(
             x_vals[-1],
             y_vals[-1],
@@ -147,7 +148,7 @@ def generate_plots(sim, results, spsa_input):
 
             x_vals = [est[0] for est in target_estimates]
             y_vals = [est[1] for est in target_estimates]
-            
+
             plt.plot(
                 x_vals,
                 y_vals,
@@ -157,7 +158,7 @@ def generate_plots(sim, results, spsa_input):
                 label=f"Target {target_id} ({algorithm_name} Est.)",
                 alpha=0.8,
             )
-            
+
             plt.scatter(
                 x_vals[0],
                 y_vals[0],
@@ -168,7 +169,7 @@ def generate_plots(sim, results, spsa_input):
                 linewidth=2,
                 zorder=5,
             )
-            
+
             plt.scatter(
                 x_vals[-1],
                 y_vals[-1],
@@ -199,10 +200,46 @@ def generate_plots(sim, results, spsa_input):
             fontweight="bold",
         )
 
-    plt.scatter([], [], c='white', s=180, marker="D", edgecolors="black", linewidth=2, label="Start (True)")
-    plt.scatter([], [], c='white', s=180, marker="X", edgecolors="black", linewidth=2, label="End (True)")
-    plt.scatter([], [], c='white', s=120, marker="s", edgecolors="black", linewidth=2, label="Start (Est.)")
-    plt.scatter([], [], c='white', s=120, marker="o", edgecolors="black", linewidth=2, label="End (Est.)")
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=180,
+        marker="D",
+        edgecolors="black",
+        linewidth=2,
+        label="Start (True)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=180,
+        marker="X",
+        edgecolors="black",
+        linewidth=2,
+        label="End (True)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=120,
+        marker="s",
+        edgecolors="black",
+        linewidth=2,
+        label="Start (Est.)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=120,
+        marker="o",
+        edgecolors="black",
+        linewidth=2,
+        label="End (Est.)",
+    )
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
@@ -284,7 +321,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             label=f"Target {target.id} (True)",
             alpha=0.7,
         )
-        
+
         plt.scatter(
             x_vals[0],
             y_vals[0],
@@ -295,7 +332,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             linewidth=2,
             zorder=5,
         )
-        
+
         plt.scatter(
             x_vals[-1],
             y_vals[-1],
@@ -318,7 +355,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             if sensor_estimates:
                 x_vals = [est[0] for est in sensor_estimates]
                 y_vals = [est[1] for est in sensor_estimates]
-                
+
                 plt.plot(
                     x_vals,
                     y_vals,
@@ -328,7 +365,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                     label=f"Target {target_id} (Sensor {sensor_id} Est.)",
                     alpha=0.8,
                 )
-                
+
                 plt.scatter(
                     x_vals[0],
                     y_vals[0],
@@ -339,7 +376,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                     linewidth=2,
                     zorder=5,
                 )
-                
+
                 plt.scatter(
                     x_vals[-1],
                     y_vals[-1],
@@ -374,10 +411,46 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                 fontsize=12,
             )
 
-    plt.scatter([], [], c='white', s=180, marker="D", edgecolors="black", linewidth=2, label="Start (True)")
-    plt.scatter([], [], c='white', s=180, marker="X", edgecolors="black", linewidth=2, label="End (True)")
-    plt.scatter([], [], c='white', s=120, marker="s", edgecolors="black", linewidth=2, label="Start (Est.)")
-    plt.scatter([], [], c='white', s=120, marker="o", edgecolors="black", linewidth=2, label="End (Est.)")
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=180,
+        marker="D",
+        edgecolors="black",
+        linewidth=2,
+        label="Start (True)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=180,
+        marker="X",
+        edgecolors="black",
+        linewidth=2,
+        label="End (True)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=120,
+        marker="s",
+        edgecolors="black",
+        linewidth=2,
+        label="Start (Est.)",
+    )
+    plt.scatter(
+        [],
+        [],
+        c="white",
+        s=120,
+        marker="o",
+        edgecolors="black",
+        linewidth=2,
+        label="End (Est.)",
+    )
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
