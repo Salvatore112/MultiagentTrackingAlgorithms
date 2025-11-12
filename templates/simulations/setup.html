@@ -11,11 +11,26 @@
             padding: 20px 0;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
         }
         .card {
             border: none;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        }
+        .divider {
+            border-left: 2px solid #dee2e6;
+            height: 100%;
+        }
+        @media (max-width: 768px) {
+            .divider {
+                border-left: none;
+                border-top: 2px solid #dee2e6;
+                margin: 20px 0;
+                padding-top: 20px;
+            }
+        }
+        .form-label {
+            font-weight: 500;
         }
     </style>
 </head>
@@ -28,37 +43,50 @@
                 <form method="post">
                     {% csrf_token %}
                     
-                    <div class="mb-3">
-                        <label for="duration" class="form-label">Simulation Duration (seconds):</label>
-                        <input type="number" class="form-control" id="duration" name="duration" value="50" min="10" max="200" required>
-                    </div>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h5 class="mb-3">Algorithms to Analyze</h5>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
+                                    <label class="form-check-label" for="original_spsa">Original SPSA</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-1 d-flex justify-content-center">
+                            <div class="divider"></div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Simulation Configuration</h5>
+                            <div class="mb-3">
+                                <label for="duration" class="form-label">Simulation Duration (seconds)</label>
+                                <input type="number" class="form-control" id="duration" name="duration" value="50" min="10" max="200" required>
+                            </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label for="num_sensors" class="form-label">Number of Sensors:</label>
-                            <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3" min="1" max="10" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="num_linear_targets" class="form-label">Number of Linear Targets:</label>
-                            <input type="number" class="form-control" id="num_linear_targets" name="num_linear_targets" value="2" min="0" max="10" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="num_random_targets" class="form-label">Number of Random Walk Targets:</label>
-                            <input type="number" class="form-control" id="num_random_targets" name="num_random_targets" value="2" min="0" max="10" required>
-                        </div>
-                    </div>
+                            <div class="mb-3">
+                                <label for="num_sensors" class="form-label">Number of Sensors</label>
+                                <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3" min="1" max="10" required>
+                            </div>
 
-                    <div class="mb-4">
-                        <label class="form-label">Algorithms to Analyze:</label>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
-                                <label class="form-check-label" for="original_spsa">Original SPSA</label>
+                            <div class="mb-3">
+                                <label class="form-label mb-2">Target Configuration</label>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-6">
+                                        <label for="num_linear_targets" class="form-label small">Linear Targets</label>
+                                        <input type="number" class="form-control" id="num_linear_targets" name="num_linear_targets" value="2" min="0" max="10" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="num_random_targets" class="form-label small">Random Walk Targets</label>
+                                        <input type="number" class="form-control" id="num_random_targets" name="num_random_targets" value="2" min="0" max="10" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-grid">
+                    <div class="d-grid mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">Run Simulation</button>
                     </div>
                 </form>
