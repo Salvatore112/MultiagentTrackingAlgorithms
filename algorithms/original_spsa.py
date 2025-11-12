@@ -18,7 +18,9 @@ class Original_SPSA:
         self.sensors_positions: Optional[Dict[int, np.ndarray]] = sensors_positions
         self.number_of_targets: int = len(true_targets_position.keys())
         self.target_ids: Set[int] = {i for i in range(self.number_of_targets)}
-        self.true_targets_position: Optional[Dict[int, np.ndarray]] = true_targets_position
+        self.true_targets_position: Optional[Dict[int, np.ndarray]] = (
+            true_targets_position
+        )
         self.distances: Optional[Dict[int, Dict[int, float]]] = distances
         # Coordinates from the previous iteration of some random coordinates for the 1st iteration
         self.init_coords: Optional[Dict[int, Dict[int, np.ndarray]]] = init_coords
@@ -31,8 +33,12 @@ class Original_SPSA:
         self.alpha: float = 0.25
         self.gamma: float = 0.25
         self.b: int = 1
-        self.s_norms: Dict[int, float] = {i: sum(val * val) for i, val in self.sensors_positions.items()}
-        self.theta: np.ndarray = np.array([val for _, val in self.true_targets_position.items()])
+        self.s_norms: Dict[int, float] = {
+            i: sum(val * val) for i, val in self.sensors_positions.items()
+        }
+        self.theta: np.ndarray = np.array(
+            [val for _, val in self.true_targets_position.items()]
+        )
         self.Delta_abs_value: float = 1 / np.sqrt(self.dimensions)
 
         max_condition_number: float = 0
@@ -129,7 +135,9 @@ class Original_SPSA:
 
         return theta_hat
 
-    def _f_l_i(self, l: int, i: int, r_hat_l: np.ndarray, neibors: Dict[int, List[int]]) -> float:
+    def _f_l_i(
+        self, l: int, i: int, r_hat_l: np.ndarray, neibors: Dict[int, List[int]]
+    ) -> float:
         C: np.ndarray = self._C_i(i, neibors)
         D: List[float] = self._D_l_i(l, i, neibors)
 
@@ -149,7 +157,9 @@ class Original_SPSA:
         return 2 * np.array(C_i)
 
     def _D_l_i(self, l: int, i: int, neibors: Dict[int, List[int]]) -> List[float]:
-        Dli: List[float] = [self._calc_D_l_i_j(self.distances.get(l), i, j) for j in neibors.get(i)]
+        Dli: List[float] = [
+            self._calc_D_l_i_j(self.distances.get(l), i, j) for j in neibors.get(i)
+        ]
         return Dli
 
     def _calc_D_l_i_j(self, meas_l: Dict[int, float], i: int, j: int) -> float:
@@ -169,13 +179,17 @@ class Original_SPSA:
     def _compute_error(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:
         return float(pow(sum(vector_1 - vector_2), 2))
 
-    def _get_random_neibors(self, weight: np.ndarray, max: int = 2) -> Dict[int, List[int]]:
+    def _get_random_neibors(
+        self, weight: np.ndarray, max: int = 2
+    ) -> Dict[int, List[int]]:
         neibors_mat: np.ndarray = (weight != 0).astype(int)
         np.fill_diagonal(neibors_mat, 0)
 
         neibors: Dict[int, List[int]] = {}
         for sensor_id in self.sensor_ids:
-            neib: List[int] = [ind for ind, sens in enumerate(neibors_mat[sensor_id]) if sens == 1]
+            neib: List[int] = [
+                ind for ind, sens in enumerate(neibors_mat[sensor_id]) if sens == 1
+            ]
             if len(neib) > max:
                 neib = sample(neib, max)
             neibors[sensor_id] = neib

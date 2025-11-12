@@ -87,14 +87,18 @@ def results_view(request: HttpRequest) -> HttpResponse:
     selected_sensor: Optional[str] = request.GET.get("sensor")
     if selected_sensor is not None and selected_sensor != "":
         selected_sensor_int: int = int(selected_sensor)
-        sensor_plots: Dict[str, str] = generate_sensor_plots(sim, results, spsa_input, selected_sensor_int)
+        sensor_plots: Dict[str, str] = generate_sensor_plots(
+            sim, results, spsa_input, selected_sensor_int
+        )
         context["sensor_plots"] = sensor_plots
         context["selected_sensor"] = selected_sensor_int
 
     return render(request, "simulations/results.html", context)
 
 
-def generate_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any]) -> Dict[str, str]:
+def generate_plots(
+    sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any]
+) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
@@ -144,7 +148,9 @@ def generate_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[st
             target_estimates: List[np.ndarray] = []
             for time_iter in algorithm_results.values():
                 estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
-                avg_estimate: np.ndarray = np.mean(list(estimates_at_time.values()), axis=0)
+                avg_estimate: np.ndarray = np.mean(
+                    list(estimates_at_time.values()), axis=0
+                )
                 target_estimates.append(avg_estimate)
 
             x_vals: List[float] = [est[0] for est in target_estimates]
@@ -300,7 +306,9 @@ def generate_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[st
     return plots
 
 
-def generate_sensor_plots(sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any], sensor_id: int) -> Dict[str, str]:
+def generate_sensor_plots(
+    sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any], sensor_id: int
+) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
