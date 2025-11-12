@@ -114,6 +114,28 @@ def generate_plots(sim, results, spsa_input):
             label=f"Target {target.id} (True)",
             alpha=0.7,
         )
+        
+        plt.scatter(
+            x_vals[0],
+            y_vals[0],
+            color=colors[i],
+            s=150,
+            marker="o",
+            edgecolors="black",
+            zorder=5,
+            label=f"Target {target.id} Start",
+        )
+        
+        plt.scatter(
+            x_vals[-1],
+            y_vals[-1],
+            color=colors[i],
+            s=150,
+            marker="s",
+            edgecolors="black",
+            zorder=5,
+            label=f"Target {target.id} End",
+        )
 
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
@@ -132,6 +154,26 @@ def generate_plots(sim, results, spsa_input):
                 linewidth=2,
                 label=f"Target {target_id} ({algorithm_name} Est.)",
                 alpha=0.8,
+            )
+            
+            plt.scatter(
+                x_vals[0],
+                y_vals[0],
+                color=colors[target_id % len(colors)],
+                s=100,
+                marker="o",
+                edgecolors="black",
+                zorder=5,
+            )
+            
+            plt.scatter(
+                x_vals[-1],
+                y_vals[-1],
+                color=colors[target_id % len(colors)],
+                s=100,
+                marker="s",
+                edgecolors="black",
+                zorder=5,
             )
 
     for i, sensor in enumerate(sim.sensors):
@@ -155,7 +197,7 @@ def generate_plots(sim, results, spsa_input):
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
-    plt.title("True Trajectories and Algorithm Estimates")
+    plt.title("True Trajectories and Algorithm Estimates (with Start/End Points)")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -232,6 +274,28 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
             label=f"Target {target.id} (True)",
             alpha=0.7,
         )
+        
+        plt.scatter(
+            x_vals[0],
+            y_vals[0],
+            color=colors[i],
+            s=150,
+            marker="o",
+            edgecolors="black",
+            zorder=5,
+            label=f"Target {target.id} Start",
+        )
+        
+        plt.scatter(
+            x_vals[-1],
+            y_vals[-1],
+            color=colors[i],
+            s=150,
+            marker="s",
+            edgecolors="black",
+            zorder=5,
+            label=f"Target {target.id} End",
+        )
 
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
@@ -251,6 +315,26 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
                     linewidth=2,
                     label=f"Target {target_id} (Sensor {sensor_id} Est.)",
                     alpha=0.8,
+                )
+                
+                plt.scatter(
+                    x_vals[0],
+                    y_vals[0],
+                    color=colors[target_id % len(colors)],
+                    s=100,
+                    marker="o",
+                    edgecolors="black",
+                    zorder=5,
+                )
+                
+                plt.scatter(
+                    x_vals[-1],
+                    y_vals[-1],
+                    color=colors[target_id % len(colors)],
+                    s=100,
+                    marker="s",
+                    edgecolors="black",
+                    zorder=5,
                 )
 
     sensor_pos = None
@@ -278,7 +362,7 @@ def generate_sensor_plots(sim, results, spsa_input, sensor_id):
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
-    plt.title(f"True Trajectories and Sensor {sensor_id} Estimates")
+    plt.title(f"True Trajectories and Sensor {sensor_id} Estimates (with Start/End Points)")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
