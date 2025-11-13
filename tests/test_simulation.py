@@ -5,6 +5,7 @@ import tempfile
 from unittest.mock import patch
 from simulations.simulation import Simulation, Target, TARGET_TYPE
 
+
 class TestSimulation:
     def setup_method(self):
         self.sim = Simulation(duration=10, time_step=1.0)
@@ -34,9 +35,9 @@ class TestSimulation:
         assert target.movement_type == TARGET_TYPE.LINEAR
 
     def test_add_linear_target(self):
-        with patch('random.uniform') as mock_uniform, \
-             patch('random.getstate') as mock_getstate, \
-             patch('random.setstate') as mock_setstate:
+        with patch("random.uniform") as mock_uniform, patch(
+            "random.getstate"
+        ) as mock_getstate, patch("random.setstate") as mock_setstate:
             mock_uniform.side_effect = [10.0, 20.0, 2.0, 0.0]
             mock_getstate.return_value = "random_state"
             initial_pos, velocity = self.sim.add_linear_target(1, area_size=50)
@@ -48,9 +49,9 @@ class TestSimulation:
             assert mock_setstate.called
 
     def test_add_random_walk_target(self):
-        with patch('random.uniform') as mock_uniform, \
-             patch('random.getstate') as _, \
-             patch('random.setstate') as _:
+        with patch("random.uniform") as mock_uniform, patch(
+            "random.getstate"
+        ) as _, patch("random.setstate") as _:
             mock_uniform.side_effect = [10.0, 20.0, 1.5, 0.0, 0.2, 0.15, 0.7]
             initial_pos, velocity = self.sim.add_random_walk_target(1, area_size=50)
             assert len(self.sim.targets) == 1
@@ -58,12 +59,12 @@ class TestSimulation:
             assert target.id == 1
             assert target.movement_type == TARGET_TYPE.RANDOM_WALK
             assert target.random_walk_params is not None
-            assert 'speed_variation' in target.random_walk_params
+            assert "speed_variation" in target.random_walk_params
 
     def test_add_uniform_sensor(self):
-        with patch('random.uniform') as mock_uniform, \
-             patch('random.getstate') as mock_getstate, \
-             patch('random.setstate') as mock_setstate:
+        with patch("random.uniform") as mock_uniform, patch(
+            "random.getstate"
+        ) as mock_getstate, patch("random.setstate") as mock_setstate:
             mock_uniform.return_value = 15.0
             mock_getstate.return_value = "random_state"
             position = self.sim.add_uniform_sensor(1, area_size=50)
@@ -93,10 +94,10 @@ class TestSimulation:
         self.sim.add_sensor(1, (0.0, 0.0))
         self.sim.add_target(1, (1.0, 1.0), (0.5, 0.5), TARGET_TYPE.LINEAR)
         self.sim.run_simulation()
-        assert 'time_points' in self.sim.simulation_data
-        assert 'sensors' in self.sim.simulation_data
-        assert 'targets' in self.sim.simulation_data
-        time_points = self.sim.simulation_data['time_points']
+        assert "time_points" in self.sim.simulation_data
+        assert "sensors" in self.sim.simulation_data
+        assert "targets" in self.sim.simulation_data
+        time_points = self.sim.simulation_data["time_points"]
         assert len(time_points) == 11
         assert time_points[0] == 0.0
         assert time_points[-1] == 10.0
@@ -134,15 +135,15 @@ class TestSimulation:
         self.sim.add_target(1, (1.0, 1.0), (0.5, 0.5), TARGET_TYPE.LINEAR)
         self.sim.run_simulation()
         spsa_data = self.sim.get_spsa_input_data()
-        assert 'sensors_positions' in spsa_data
-        assert 'init_coords' in spsa_data
-        assert 'data' in spsa_data
-        assert 1 in spsa_data['sensors_positions']
-        assert np.array_equal(spsa_data['sensors_positions'][1], np.array([0.0, 0.0]))
-        assert 1 in spsa_data['init_coords']
-        assert 1 in spsa_data['init_coords'][1]
-        assert 0 in spsa_data['data']
-        assert len(spsa_data['data'][0]) == 2
+        assert "sensors_positions" in spsa_data
+        assert "init_coords" in spsa_data
+        assert "data" in spsa_data
+        assert 1 in spsa_data["sensors_positions"]
+        assert np.array_equal(spsa_data["sensors_positions"][1], np.array([0.0, 0.0]))
+        assert 1 in spsa_data["init_coords"]
+        assert 1 in spsa_data["init_coords"][1]
+        assert 0 in spsa_data["data"]
+        assert len(spsa_data["data"][0]) == 2
 
     def test_print_simulation_info(self):
         self.sim.add_sensor(1, (0.0, 0.0))

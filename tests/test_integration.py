@@ -4,6 +4,7 @@ from unittest.mock import patch
 from simulations.simulation import Simulation, TARGET_TYPE
 from algorithms.original_spsa import Original_SPSA
 
+
 class TestIntegration:
     def test_simulation_to_spsa_integration(self):
         sim = Simulation(duration=5, time_step=1.0)
@@ -13,12 +14,12 @@ class TestIntegration:
         sim.run_simulation()
         spsa_data = sim.get_spsa_input_data()
         spsa = Original_SPSA(
-            sensors_positions=spsa_data['sensors_positions'],
-            true_targets_position=spsa_data['data'][0][0],
-            distances=spsa_data['data'][0][1],
-            init_coords=spsa_data['init_coords']
+            sensors_positions=spsa_data["sensors_positions"],
+            true_targets_position=spsa_data["data"][0][0],
+            distances=spsa_data["data"][0][1],
+            init_coords=spsa_data["init_coords"],
         )
-        result = spsa.run_n_iterations(spsa_data['data'])
+        result = spsa.run_n_iterations(spsa_data["data"])
         assert isinstance(result, dict)
         assert len(result) > 0
         for iteration_data in result.values():

@@ -3,32 +3,30 @@ import numpy as np
 from unittest.mock import patch
 from algorithms.original_spsa import Original_SPSA
 
+
 class TestOriginalSPSA:
     def setup_method(self):
         self.sensors_positions = {
             0: np.array([0.0, 0.0]),
             1: np.array([10.0, 0.0]),
-            2: np.array([0.0, 10.0])
+            2: np.array([0.0, 10.0]),
         }
-        self.true_targets_position = {
-            0: np.array([5.0, 5.0]),
-            1: np.array([3.0, 7.0])
-        }
+        self.true_targets_position = {0: np.array([5.0, 5.0]), 1: np.array([3.0, 7.0])}
         self.distances = {
             0: {0: 50.0, 1: 50.0, 2: 50.0},
-            1: {0: 58.0, 1: 58.0, 2: 58.0}
+            1: {0: 58.0, 1: 58.0, 2: 58.0},
         }
         self.init_coords = {
             0: {
                 0: np.array([6.0, 4.0]),
                 1: np.array([4.0, 6.0]),
-                2: np.array([5.0, 5.0])
+                2: np.array([5.0, 5.0]),
             },
             1: {
                 0: np.array([2.0, 8.0]),
                 1: np.array([4.0, 6.0]),
-                2: np.array([3.0, 7.0])
-            }
+                2: np.array([3.0, 7.0]),
+            },
         }
 
     def test_initialization(self):
@@ -36,7 +34,7 @@ class TestOriginalSPSA:
             sensors_positions=self.sensors_positions,
             true_targets_position=self.true_targets_position,
             distances=self.distances,
-            init_coords=self.init_coords
+            init_coords=self.init_coords,
         )
         assert spsa.number_of_sensors == 3
         assert spsa.number_of_targets == 2
@@ -54,20 +52,16 @@ class TestOriginalSPSA:
     def test_condition_number(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
-        test_matrix = np.array([
-            [2.0, -1.0, 0.0],
-            [-1.0, 2.0, -1.0],
-            [0.0, -1.0, 2.0]
-        ])
+        test_matrix = np.array([[2.0, -1.0, 0.0], [-1.0, 2.0, -1.0], [0.0, -1.0, 2.0]])
         condition_number = spsa._condition_number(test_matrix)
         assert condition_number > 0
 
     def test_rho_overline(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
         result = spsa._rho_overline(10.0, 7.0)
         assert result == 3.0
@@ -75,7 +69,7 @@ class TestOriginalSPSA:
     def test_compute_error(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
         vec1 = np.array([1.0, 2.0])
         vec2 = np.array([4.0, 6.0])
@@ -86,13 +80,9 @@ class TestOriginalSPSA:
     def test_get_random_neighbors(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
-        weight_matrix = np.array([
-            [0, 1, 1],
-            [1, 0, 1],
-            [1, 1, 0]
-        ])
+        weight_matrix = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
         neighbors = spsa._get_random_neibors(weight_matrix, max=2)
         assert 0 in neighbors
         assert 1 in neighbors
@@ -103,7 +93,7 @@ class TestOriginalSPSA:
     def test_calc_D_l_i_j(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
         meas_l = {0: 10.0, 1: 8.0, 2: 12.0}
         spsa.s_norms = {0: 0.0, 1: 100.0, 2: 100.0}
@@ -111,8 +101,8 @@ class TestOriginalSPSA:
         expected = 102.0
         assert result == expected
 
-    @patch('random.random')
-    @patch('random.sample')
+    @patch("random.random")
+    @patch("random.sample")
     def test_run_main_algorithm(self, mock_sample, mock_random):
         mock_random.side_effect = [0.3, 0.7, 0.2, 0.8] * 10
         mock_sample.return_value = [1, 2]
@@ -120,13 +110,9 @@ class TestOriginalSPSA:
             sensors_positions=self.sensors_positions,
             true_targets_position=self.true_targets_position,
             distances=self.distances,
-            init_coords=self.init_coords
+            init_coords=self.init_coords,
         )
-        spsa.weight = np.array([
-            [0, 0.5, 0.5],
-            [0.5, 0, 0.5],
-            [0.5, 0.5, 0]
-        ])
+        spsa.weight = np.array([[0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0]])
         result = spsa.run_main_algorithm()
         assert isinstance(result, dict)
         assert 0 in result
@@ -141,13 +127,13 @@ class TestOriginalSPSA:
         data = {
             0: [self.true_targets_position, self.distances],
             1: [self.true_targets_position, self.distances],
-            2: [self.true_targets_position, self.distances]
+            2: [self.true_targets_position, self.distances],
         }
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
             true_targets_position=self.true_targets_position,
             distances=self.distances,
-            init_coords=self.init_coords
+            init_coords=self.init_coords,
         )
         result = spsa.run_n_iterations(data)
         assert isinstance(result, dict)
@@ -164,13 +150,9 @@ class TestOriginalSPSA:
     def test_update_matrix(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
-        spsa.weight = np.array([
-            [0, 1, 1],
-            [1, 0, 1],
-            [1, 1, 0]
-        ])
+        spsa.weight = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
         cond, weight = spsa._update_matrix()
         assert cond > 0
         assert weight.shape == (3, 3)
@@ -179,10 +161,10 @@ class TestOriginalSPSA:
     def test_gen_new_coordinates(self):
         spsa = Original_SPSA(
             sensors_positions=self.sensors_positions,
-            true_targets_position=self.true_targets_position
+            true_targets_position=self.true_targets_position,
         )
         original_coords = np.array([5.0, 5.0])
-        with patch('random.random') as mock_random:
+        with patch("random.random") as mock_random:
             mock_random.return_value = 0.5
             new_coords = spsa._gen_new_coordinates(original_coords, R=1.0)
             assert isinstance(new_coords, np.ndarray)
