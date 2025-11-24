@@ -21,14 +21,23 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         num_linear_targets: int = int(request.POST.get("num_linear_targets", 2))
         num_random_targets: int = int(request.POST.get("num_random_targets", 2))
         algorithms: List[str] = request.POST.getlist("algorithms")
+        
+        noise_enabled: bool = request.POST.get("noise_enabled") == "on"
+        noise_low: float = float(request.POST.get("noise_low", -0.1))
+        noise_high: float = float(request.POST.get("noise_high", 0.1))
 
-        request.session["simulation_params"] = {
+        simulation_params = {
             "duration": duration,
             "num_sensors": num_sensors,
             "num_linear_targets": num_linear_targets,
             "num_random_targets": num_random_targets,
             "algorithms": algorithms,
+            "noise_enabled": noise_enabled,
+            "noise_low": noise_low,
+            "noise_high": noise_high,
         }
+
+        request.session["simulation_params"] = simulation_params
 
         return HttpResponseRedirect(reverse("results"))
 
@@ -46,8 +55,23 @@ def results_view(request: HttpRequest) -> HttpResponse:
     num_linear_targets: int = params.get("num_linear_targets", 2)
     num_random_targets: int = params.get("num_random_targets", 2)
     algorithms: List[str] = params.get("algorithms", ["original_spsa"])
+    noise_enabled: bool = params.get("noise_enabled", False)
+    noise_low: float = params.get("noise_low", -0.1)
+    noise_high: float = params.get("noise_high", 0.1)
 
-    sim: Simulation = Simulation(duration=duration, time_step=1.0)
+    noise_config: Optional[Dict[str, Any]] = None
+    if noise_enabled:
+        noise_config = {
+            "type": "uniform",
+            "low": noise_low,
+            "high": noise_high
+        }
+
+    sim: Simulation = Simulation(
+        duration=duration, 
+        time_step=1.0, 
+        noise_config=noise_config
+    )
 
     for i in range(num_sensors):
         sim.add_uniform_sensor(i, area_size=50)

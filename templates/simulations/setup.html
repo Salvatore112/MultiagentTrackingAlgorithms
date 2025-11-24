@@ -32,6 +32,12 @@
         .form-label {
             font-weight: 500;
         }
+        .noise-section {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -50,6 +56,24 @@
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
                                     <label class="form-check-label" for="original_spsa">Original SPSA</label>
+                                </div>
+                            </div>
+
+                            <div class="noise-section mt-4">
+                                <h6 class="mb-3">Noise Configuration</h6>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="noise_enabled" name="noise_enabled">
+                                    <label class="form-check-label" for="noise_enabled">Enable Distance Noise</label>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <label for="noise_low" class="form-label small">Noise Lower Bound</label>
+                                        <input type="number" class="form-control" id="noise_low" name="noise_low" value="-0.1" step="0.01" disabled>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="noise_high" class="form-label small">Noise Upper Bound</label>
+                                        <input type="number" class="form-control" id="noise_high" name="noise_high" value="0.1" step="0.01" disabled>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -95,5 +119,21 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const noiseToggle = document.getElementById('noise_enabled');
+            const noiseLow = document.getElementById('noise_low');
+            const noiseHigh = document.getElementById('noise_high');
+            
+            function updateNoiseFields() {
+                const enabled = noiseToggle.checked;
+                noiseLow.disabled = !enabled;
+                noiseHigh.disabled = !enabled;
+            }
+            
+            noiseToggle.addEventListener('change', updateNoiseFields);
+            updateNoiseFields();
+        });
+    </script>
 </body>
 </html>
