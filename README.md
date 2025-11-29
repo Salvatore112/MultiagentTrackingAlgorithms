@@ -32,3 +32,7 @@ The distances will be noise. The noise is uniformly genereated from the interval
 <img width="1327" height="778" alt="image" src="https://github.com/user-attachments/assets/1aa033da-e97e-4e6e-89b2-dafdeb913ba2" />
 After everything is configured, the user can start the simulation. The chosen algorithms will be ran and the plots of the estimates of each sensor will be shown as well as the plot of the error evolution. You can then see how each sensor observed targets and how its error changed.
 <img width="1256" height="842" alt="image" src="https://github.com/user-attachments/assets/d2581dc3-cdc2-42bf-a9fc-68f206279a67" />
+
+## Contact us
+
+If you want to help the project you may open a pull request. You can contact [@me](https://t.me/unacerveza1) to ask any questions or give an advice
