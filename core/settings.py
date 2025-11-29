@@ -22,11 +22,8 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-def generate_secret_key() -> str:
-    """Generate a random secret key with the same format as Django's default"""
-    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-    return ''.join(secrets.choice(chars) for _ in range(50))
+# Temporary key for development only
+SECRET_KEY = 'django-insecure-temporary-key-for-dev-only-12345'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True
