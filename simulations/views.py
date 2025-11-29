@@ -21,7 +21,7 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         num_linear_targets: int = int(request.POST.get("num_linear_targets", 2))
         num_random_targets: int = int(request.POST.get("num_random_targets", 2))
         algorithms: List[str] = request.POST.getlist("algorithms")
-        
+
         noise_enabled: bool = request.POST.get("noise_enabled") == "on"
         noise_low: float = float(request.POST.get("noise_low", -0.1))
         noise_high: float = float(request.POST.get("noise_high", 0.1))
@@ -61,16 +61,10 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
-        noise_config = {
-            "type": "uniform",
-            "low": noise_low,
-            "high": noise_high
-        }
+        noise_config = {"type": "uniform", "low": noise_low, "high": noise_high}
 
     sim: Simulation = Simulation(
-        duration=duration, 
-        time_step=1.0, 
-        noise_config=noise_config
+        duration=duration, time_step=1.0, noise_config=noise_config
     )
 
     for i in range(num_sensors):
