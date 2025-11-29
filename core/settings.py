@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import secrets
+
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -21,7 +23,10 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY: str = "django-insecure-e3xxvdp$h7+rr&$qld987(3)5^wo2&_m*!o5f227lq!q8h+vf="
+def generate_secret_key() -> str:
+    """Generate a random secret key with the same format as Django's default"""
+    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+    return ''.join(secrets.choice(chars) for _ in range(50))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True

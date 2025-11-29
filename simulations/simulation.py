@@ -154,6 +154,7 @@ class Simulation:
         self.sensors.append(Sensor(sensor_id, (pos_x, pos_y)))
         return (pos_x, pos_y)
 
+    # Squared Euiclidian distance
     def calculate_distance(
         self, pos1: Tuple[float, float], pos2: Tuple[float, float]
     ) -> float:
@@ -546,6 +547,8 @@ class Simulation:
         else:
             return distance
 
+    # The format of the result dictionary will be used as format
+    # of input for future algoritmhs
     def get_spsa_input_data(
         self,
         time_points: Optional[List[float]] = None,

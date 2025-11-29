@@ -196,6 +196,8 @@ class Original_SPSA:
 
         return neibors
 
+    # The format of the result dictionary will be the same
+    # for the future algorithms
     def run_n_iterations(self, data: Dict[int, Any]) -> Dict[int, Any]:
         result: Dict[int, Any] = defaultdict()
         for iteration in data.keys():
