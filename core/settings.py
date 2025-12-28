@@ -28,8 +28,15 @@ SECRET_KEY = "django-insecure-temporary-key-for-dev-only-12345"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG: bool = True
 
-ALLOWED_HOSTS: List[str] = []
-
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [
+        'multiagenttrackingalgorithms.onrender.com',
+        '.onrender.com',  # Allows all render subdomains
+        'localhost',
+        '127.0.0.1',
+    ]
 
 # Application definition
 
