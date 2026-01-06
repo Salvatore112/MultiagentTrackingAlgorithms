@@ -21,6 +21,7 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         num_linear_targets: int = int(request.POST.get("num_linear_targets", 2))
         num_random_targets: int = int(request.POST.get("num_random_targets", 2))
         algorithms: List[str] = request.POST.getlist("algorithms")
+        num_runs: int = int(request.POST.get("num_runs", 1))
 
         noise_enabled: bool = request.POST.get("noise_enabled") == "on"
         noise_low: float = float(request.POST.get("noise_low", -0.1))
@@ -35,6 +36,7 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             "noise_enabled": noise_enabled,
             "noise_low": noise_low,
             "noise_high": noise_high,
+            "num_runs": num_runs,
         }
 
         request.session["simulation_params"] = simulation_params
@@ -58,66 +60,105 @@ def results_view(request: HttpRequest) -> HttpResponse:
     noise_enabled: bool = params.get("noise_enabled", False)
     noise_low: float = params.get("noise_low", -0.1)
     noise_high: float = params.get("noise_high", 0.1)
+    num_runs: int = params.get("num_runs", 1)
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
         noise_config = {"type": "uniform", "low": noise_low, "high": noise_high}
 
-    sim: Simulation = Simulation(
-        duration=duration, time_step=1.0, noise_config=noise_config
-    )
+    all_results: Dict[int, Dict[str, Any]] = {}
+    all_simulations: Dict[int, Simulation] = {}
 
-    for i in range(num_sensors):
-        sim.add_uniform_sensor(i, area_size=50)
-
-    target_id: int = 0
-    for i in range(num_linear_targets):
-        sim.add_linear_target(target_id, area_size=50)
-        target_id += 1
-
-    for i in range(num_random_targets):
-        sim.add_random_walk_target(target_id, area_size=50)
-        target_id += 1
-
-    sim.run_simulation()
-    spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
-
-    results: Dict[str, Any] = {}
-    if "original_spsa" in algorithms:
-        test_obj: Original_SPSA = Original_SPSA(
-            sensors_positions=spsa_input["sensors_positions"],
-            true_targets_position=spsa_input["data"][0][0],
-            distances=spsa_input["data"][0][1],
-            init_coords=spsa_input["init_coords"],
-        )
-        results["original_spsa"] = test_obj.run_n_iterations(data=spsa_input["data"])
-
-    if "accelerated_spsa" in algorithms:
-        from algorithms.accelerated_spsa import Accelerated_SPSA
-
-        acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
-            sensors_positions=spsa_input["sensors_positions"],
-            true_targets_position=spsa_input["data"][0][0],
-            distances=spsa_input["data"][0][1],
-            init_coords=spsa_input["init_coords"],
-        )
-        results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
-            data=spsa_input["data"]
+    for run_id in range(num_runs):
+        sim: Simulation = Simulation(
+            duration=duration, time_step=1.0, noise_config=noise_config
         )
 
-    plots_data: Dict[str, str] = generate_plots(sim, results, spsa_input)
+        for i in range(num_sensors):
+            sim.add_uniform_sensor(i, area_size=50)
+
+        target_id: int = 0
+        for i in range(num_linear_targets):
+            sim.add_linear_target(target_id, area_size=50)
+            target_id += 1
+
+        for i in range(num_random_targets):
+            sim.add_random_walk_target(target_id, area_size=50)
+            target_id += 1
+
+        sim.run_simulation()
+        spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
+
+        results: Dict[str, Any] = {}
+        if "original_spsa" in algorithms:
+            test_obj: Original_SPSA = Original_SPSA(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
+            )
+            results["original_spsa"] = test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
+        if "accelerated_spsa" in algorithms:
+            from algorithms.accelerated_spsa import Accelerated_SPSA
+
+            acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
+            )
+            results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
+        all_results[run_id] = results
+        all_simulations[run_id] = sim
+
+    selected_run: Optional[int] = request.GET.get("run")
+    selected_sensor: Optional[str] = request.GET.get("sensor")
+    selected_target: Optional[str] = request.GET.get("target")
+
+    if selected_run is None or selected_run == "":
+        selected_run = 0
+    else:
+        selected_run = int(selected_run)
+
+    selected_run = max(0, min(selected_run, num_runs - 1))
+
+    plots_data: Dict[str, str] = {}
+    aggregated_plots: Dict[str, str] = {}
+
+    if num_runs == 1:
+        plots_data = generate_plots(
+            all_simulations[0], all_results[0], selected_run, num_runs
+        )
+    else:
+        aggregated_plots = generate_aggregated_plots(
+            all_simulations, all_results, num_runs
+        )
+        if selected_run < num_runs:
+            plots_data = generate_plots(
+                all_simulations[selected_run],
+                all_results[selected_run],
+                selected_run,
+                num_runs,
+            )
 
     context: Dict[str, Any] = {
         "plots": plots_data,
-        "results": results,
+        "aggregated_plots": aggregated_plots,
+        "results": all_results.get(selected_run, {}),
         "sensors": list(range(num_sensors)),
         "targets": list(range(num_linear_targets + num_random_targets)),
         "algorithms": algorithms,
         "simulation_params": params,
+        "num_runs": num_runs,
+        "selected_run": selected_run,
+        "run_range": range(num_runs),
     }
-
-    selected_sensor: Optional[str] = request.GET.get("sensor")
-    selected_target: Optional[str] = request.GET.get("target")
 
     if (selected_sensor is not None and selected_sensor != "") or (
         selected_target is not None and selected_target != ""
@@ -129,7 +170,11 @@ def results_view(request: HttpRequest) -> HttpResponse:
             int(selected_target) if selected_target and selected_target != "" else None
         )
         individual_plots: Dict[str, str] = generate_individual_plots(
-            sim, results, spsa_input, sensor_int, target_int
+            all_simulations[selected_run],
+            all_results[selected_run],
+            sensor_int,
+            target_int,
+            selected_run,
         )
         context["individual_plots"] = individual_plots
         context["selected_sensor"] = sensor_int
@@ -139,7 +184,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
 
 def generate_plots(
-    sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any]
+    sim: Simulation, results: Dict[str, Any], run_id: int, num_runs: int
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -293,7 +338,12 @@ def generate_plots(
 
     plt.xlabel("X coordinate")
     plt.ylabel("Y coordinate")
-    plt.title("True Trajectories and Algorithm Estimates")
+    if num_runs > 1:
+        plt.title(
+            f"True Trajectories and Algorithm Estimates (Run {run_id + 1}/{num_runs})"
+        )
+    else:
+        plt.title("True Trajectories and Algorithm Estimates")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -337,7 +387,10 @@ def generate_plots(
 
     plt.xlabel("Iteration")
     plt.ylabel("Average Error (All Sensors)")
-    plt.title("Convergence Error for Each Target")
+    if num_runs > 1:
+        plt.title(f"Convergence Error for Each Target (Run {run_id + 1}/{num_runs})")
+    else:
+        plt.title("Convergence Error for Each Target")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -348,37 +401,80 @@ def generate_plots(
     plots["convergence"] = base64.b64encode(buffer.getvalue()).decode()
     plt.close()
 
+    return plots
+
+
+def generate_aggregated_plots(
+    all_simulations: Dict[int, Simulation],
+    all_results: Dict[int, Dict[str, Any]],
+    num_runs: int,
+) -> Dict[str, str]:
+    plots: Dict[str, str] = {}
+
+    if num_runs <= 1:
+        return plots
+
+    aggregated_errors: Dict[str, List[List[float]]] = {}
+
+    for algorithm_name in all_results[0].keys():
+        aggregated_errors[algorithm_name] = []
+        for run_id in range(num_runs):
+            if run_id in all_results and algorithm_name in all_results[run_id]:
+                algorithm_results = all_results[run_id][algorithm_name]
+                errors_over_time: List[float] = []
+
+                for time_iter in algorithm_results.values():
+                    true_positions: Dict[int, np.ndarray] = time_iter[0]
+                    estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
+
+                    iteration_errors: List[float] = []
+                    for target_id, true_pos in true_positions.items():
+                        sensor_estimates: Dict[int, np.ndarray] = estimates[target_id]
+                        for sensor_est in sensor_estimates.values():
+                            error: float = np.linalg.norm(sensor_est - true_pos)
+                            iteration_errors.append(error)
+
+                    avg_error: float = (
+                        np.mean(iteration_errors) if iteration_errors else 0.0
+                    )
+                    errors_over_time.append(avg_error)
+
+                aggregated_errors[algorithm_name].append(errors_over_time)
+
     plt.figure(figsize=(12, 8))
 
-    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
-    for algorithm_name, algorithm_results in results.items():
-        aggregated_errors: List[float] = []
+    colors = plt.cm.tab10(np.linspace(0, 1, len(aggregated_errors.keys())))
 
-        for time_iter in algorithm_results.values():
-            true_positions: Dict[int, np.ndarray] = time_iter[0]
-            estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
+    for idx, (algorithm_name, all_run_errors) in enumerate(aggregated_errors.items()):
+        if not all_run_errors:
+            continue
 
-            iteration_errors: List[float] = []
-            for target_id, true_pos in true_positions.items():
-                sensor_estimates: Dict[int, np.ndarray] = estimates[target_id]
-                for sensor_est in sensor_estimates.values():
-                    error: float = np.linalg.norm(sensor_est - true_pos)
-                    iteration_errors.append(error)
+        min_length = min(len(errors) for errors in all_run_errors)
+        all_run_errors = [errors[:min_length] for errors in all_run_errors]
 
-            avg_error: float = np.mean(iteration_errors) if iteration_errors else 0.0
-            aggregated_errors.append(avg_error)
+        mean_errors = np.mean(all_run_errors, axis=0)
+        std_errors = np.std(all_run_errors, axis=0)
+
+        iterations = range(len(mean_errors))
 
         plt.plot(
-            range(len(aggregated_errors)),
-            aggregated_errors,
-            linestyle=line_styles.get(algorithm_name, "-"),
+            iterations,
+            mean_errors,
+            color=colors[idx],
             label=algorithm_name,
             linewidth=2,
         )
+        plt.fill_between(
+            iterations,
+            mean_errors - std_errors,
+            mean_errors + std_errors,
+            color=colors[idx],
+            alpha=0.2,
+        )
 
     plt.xlabel("Iteration")
-    plt.ylabel("Aggregated Error (All Targets & Sensors)")
-    plt.title("Aggregated Error Convergence")
+    plt.ylabel("Aggregated Error (Mean ± Std)")
+    plt.title(f"Aggregated Error Convergence ({num_runs} Runs)")
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -395,9 +491,9 @@ def generate_plots(
 def generate_individual_plots(
     sim: Simulation,
     results: Dict[str, Any],
-    spsa_input: Dict[str, Any],
     sensor_id: Optional[int] = None,
     target_id: Optional[int] = None,
+    run_id: int = 0,
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -561,6 +657,8 @@ def generate_individual_plots(
         elif target_id is not None:
             title_suffix = f" - Target {target_id}"
 
+        title_suffix += f" (Run {run_id + 1})"
+
         plt.xlabel("X coordinate")
         plt.ylabel("Y coordinate")
         plt.title(f"Trajectories{title_suffix}")
@@ -680,6 +778,8 @@ def generate_individual_plots(
         if sensor_id is not None:
             title_suffix = f" - Sensor {sensor_id}"
 
+        title_suffix += f" (Run {run_id + 1})"
+
         plt.xlabel("X coordinate")
         plt.ylabel("Y coordinate")
         plt.title(f"Trajectories{title_suffix}")
@@ -784,6 +884,8 @@ def generate_individual_plots(
         title_suffix = f" - Sensor {sensor_id}"
     elif target_id is not None:
         title_suffix = f" - Target {target_id}"
+
+    title_suffix += f" (Run {run_id + 1})"
 
     plt.xlabel("Iteration")
     plt.ylabel("Error")

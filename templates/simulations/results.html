@@ -31,6 +31,9 @@
         .nav-tabs .nav-link.active {
             font-weight: bold;
         }
+        .run-selector {
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -46,15 +49,39 @@
                             <div class="col-md-6">
                                 <p><strong>Duration:</strong> {{ simulation_params.duration }} seconds</p>
                                 <p><strong>Sensors:</strong> {{ simulation_params.num_sensors }}</p>
+                                <p><strong>Number of Runs:</strong> {{ simulation_params.num_runs }}</p>
                             </div>
                             <div class="col-md-6">
                                 <p><strong>Linear Targets:</strong> {{ simulation_params.num_linear_targets }}</p>
                                 <p><strong>Random Walk Targets:</strong> {{ simulation_params.num_random_targets }}</p>
+                                <p><strong>Current Run:</strong> {{ selected_run|add:1 }} of {{ num_runs }}</p>
                             </div>
                         </div>
                         <p><strong>Algorithms:</strong> {{ simulation_params.algorithms|join:", " }}</p>
                     </div>
                 </div>
+
+                {% if num_runs > 1 %}
+                <div class="run-selector card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Select Simulation Run</h5>
+                        <form method="get" class="row g-3 align-items-center">
+                            <div class="col-md-8">
+                                <select class="form-select" id="runSelect" name="run" onchange="this.form.submit()">
+                                    {% for run_num in run_range %}
+                                    <option value="{{ run_num }}" {% if selected_run == run_num %}selected{% endif %}>
+                                        Run {{ run_num|add:1 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">View Run</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
 
                 <ul class="nav nav-tabs" id="viewTabs" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -63,12 +90,18 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab">Individual View</button>
                     </li>
+                    {% if num_runs > 1 %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="aggregated-tab" data-bs-toggle="tab" data-bs-target="#aggregated" type="button" role="tab">Aggregated View</button>
+                    </li>
+                    {% endif %}
                 </ul>
 
                 <div class="tab-content" id="viewTabsContent">
                     <div class="tab-pane fade show active" id="all" role="tabpanel">
-                        <h2 class="mb-4">Overall Analysis</h2>
+                        <h2 class="mb-4">Overall Analysis {% if num_runs > 1 %}(Run {{ selected_run|add:1 }}){% endif %}</h2>
                         
+                        {% if plots.trajectories %}
                         <div class="row mb-4">
                             <div class="col-lg-6">
                                 <div class="plot-container">
@@ -83,23 +116,19 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <div class="plot-container">
-                                    <h3>Aggregated Error (All Targets & Sensors)</h3>
-                                    <img src="data:image/png;base64,{{ plots.aggregated }}" alt="Aggregated Error Plot">
-                                </div>
-                            </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            No plots available for this run.
                         </div>
+                        {% endif %}
                     </div>
 
                     <div class="tab-pane fade" id="individual" role="tabpanel">
-                        <h2 class="mb-4">Individual View</h2>
+                        <h2 class="mb-4">Individual View {% if num_runs > 1 %}(Run {{ selected_run|add:1 }}){% endif %}</h2>
                         <div class="card mb-4">
                             <div class="card-body">
                                 <form method="get" class="row g-3 align-items-end">
-                                    <div class="col-md-5">
+                                    <div class="col-md-4">
                                         <label for="sensorSelect" class="form-label">Select Sensor:</label>
                                         <select class="form-select" id="sensorSelect" name="sensor">
                                             <option value="">All Sensors</option>
@@ -110,7 +139,7 @@
                                             {% endfor %}
                                         </select>
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-4">
                                         <label for="targetSelect" class="form-label">Select Target:</label>
                                         <select class="form-select" id="targetSelect" name="target">
                                             <option value="">All Targets</option>
@@ -122,7 +151,11 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <button type="submit" class="btn btn-success">Apply</button>
+                                        <input type="hidden" name="run" value="{{ selected_run }}">
+                                        <button type="submit" class="btn btn-success w-100">Apply</button>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <a href="?run={{ selected_run }}" class="btn btn-secondary w-100">Reset</a>
                                     </div>
                                 </form>
                             </div>
@@ -146,9 +179,31 @@
                         </div>
                         {% endif %}
                     </div>
+
+                    {% if num_runs > 1 %}
+                    <div class="tab-pane fade" id="aggregated" role="tabpanel">
+                        <h2 class="mb-4">Aggregated Analysis (All {{ num_runs }} Runs)</h2>
+                        
+                        {% if aggregated_plots.aggregated %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="plot-container">
+                                    <h3>Aggregated Error (Mean ± Standard Deviation)</h3>
+                                    <p class="text-muted">Shaded area represents ±1 standard deviation across all {{ num_runs }} runs</p>
+                                    <img src="data:image/png;base64,{{ aggregated_plots.aggregated }}" alt="Aggregated Error Plot">
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            No aggregated plots available.
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
-                <div class="d-grid mt-4">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                     <a href="{% url 'setup' %}" class="btn btn-secondary">Run New Simulation</a>
                 </div>
             </div>
@@ -169,6 +224,17 @@
                     tab.show();
                 }
             }
+            
+            {% if num_runs > 1 %}
+            const runParam = urlParams.get('run');
+            if (runParam === null || runParam === '') {
+                const allTab = document.getElementById('all-tab');
+                if (allTab) {
+                    const tab = new bootstrap.Tab(allTab);
+                    tab.show();
+                }
+            }
+            {% endif %}
         });
     </script>
 </body>
