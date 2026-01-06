@@ -92,6 +92,19 @@ def results_view(request: HttpRequest) -> HttpResponse:
         )
         results["original_spsa"] = test_obj.run_n_iterations(data=spsa_input["data"])
 
+    if "accelerated_spsa" in algorithms:
+        from algorithms.accelerated_spsa import Accelerated_SPSA
+
+        acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
+            sensors_positions=spsa_input["sensors_positions"],
+            true_targets_position=spsa_input["data"][0][0],
+            distances=spsa_input["data"][0][1],
+            init_coords=spsa_input["init_coords"],
+        )
+        results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
+            data=spsa_input["data"]
+        )
+
     plots_data: Dict[str, str] = generate_plots(sim, results, spsa_input)
 
     context: Dict[str, Any] = {
@@ -172,6 +185,7 @@ def generate_plots(
             zorder=5,
         )
 
+    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
             target_estimates: List[np.ndarray] = []
@@ -188,10 +202,10 @@ def generate_plots(
             plt.plot(
                 x_vals,
                 y_vals,
-                "--",
+                line_styles.get(algorithm_name, "--"),
                 color=colors[target_id],
                 linewidth=2,
-                label=f"Target {target_id} ({algorithm_name} Est.)",
+                label=f"Target {target_id} ({algorithm_name})",
                 alpha=0.8,
             )
 
@@ -292,6 +306,7 @@ def generate_plots(
 
     plt.figure(figsize=(12, 8))
 
+    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
     for algorithm_name, algorithm_results in results.items():
         errors_over_time: Dict[int, List[float]] = {
             target_id: [] for target_id in algorithm_results[0][0].keys()
@@ -315,6 +330,7 @@ def generate_plots(
                 range(len(errors)),
                 errors,
                 color=colors[target_id],
+                linestyle=line_styles.get(algorithm_name, "-"),
                 label=f"Target {target_id} ({algorithm_name})",
                 linewidth=2,
             )
@@ -334,6 +350,7 @@ def generate_plots(
 
     plt.figure(figsize=(12, 8))
 
+    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
     for algorithm_name, algorithm_results in results.items():
         aggregated_errors: List[float] = []
 
@@ -354,6 +371,7 @@ def generate_plots(
         plt.plot(
             range(len(aggregated_errors)),
             aggregated_errors,
+            linestyle=line_styles.get(algorithm_name, "-"),
             label=algorithm_name,
             linewidth=2,
         )
@@ -427,6 +445,7 @@ def generate_individual_plots(
                 zorder=5,
             )
 
+        line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
         for algorithm_name, algorithm_results in results.items():
             if sensor_id is not None:
                 sensor_estimates: List[np.ndarray] = []
@@ -442,10 +461,10 @@ def generate_individual_plots(
                     plt.plot(
                         x_vals,
                         y_vals,
-                        "--",
+                        line_styles.get(algorithm_name, "--"),
                         color=colors[sensor_id % len(colors)],
                         linewidth=2,
-                        label=f"Sensor {sensor_id} ({algorithm_name} Est.)",
+                        label=f"Sensor {sensor_id} ({algorithm_name})",
                         alpha=0.8,
                     )
 
@@ -487,10 +506,10 @@ def generate_individual_plots(
                         plt.plot(
                             x_vals,
                             y_vals,
-                            "--",
+                            line_styles.get(algorithm_name, "--"),
                             color=colors[sensor_idx],
                             linewidth=2,
-                            label=f"Sensor {sensor_idx} ({algorithm_name} Est.)",
+                            label=f"Sensor {sensor_idx} ({algorithm_name})",
                             alpha=0.8,
                         )
 
@@ -589,6 +608,7 @@ def generate_individual_plots(
                 zorder=5,
             )
 
+        line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
         for algorithm_name, algorithm_results in results.items():
             if sensor_id is not None:
                 for target_idx in algorithm_results[0][0].keys():
@@ -607,10 +627,10 @@ def generate_individual_plots(
                         plt.plot(
                             x_vals,
                             y_vals,
-                            "--",
+                            line_styles.get(algorithm_name, "--"),
                             color=colors[target_idx],
                             linewidth=2,
-                            label=f"Target {target_idx} (Sensor {sensor_id} Est.)",
+                            label=f"Target {target_idx} (Sensor {sensor_id} {algorithm_name})",
                             alpha=0.8,
                         )
 
@@ -675,6 +695,7 @@ def generate_individual_plots(
 
     plt.figure(figsize=(12, 8))
 
+    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
     for algorithm_name, algorithm_results in results.items():
         if target_id is not None:
             if sensor_id is not None:
@@ -694,6 +715,7 @@ def generate_individual_plots(
                     plt.plot(
                         range(len(errors)),
                         errors,
+                        linestyle=line_styles.get(algorithm_name, "-"),
                         label=f"Sensor {sensor_id} ({algorithm_name})",
                         linewidth=2,
                     )
@@ -721,6 +743,7 @@ def generate_individual_plots(
                             range(len(errors)),
                             errors,
                             color=colors_sensor[sensor_idx],
+                            linestyle=line_styles.get(algorithm_name, "-"),
                             label=f"Sensor {sensor_idx} ({algorithm_name})",
                             linewidth=2,
                         )
@@ -749,6 +772,7 @@ def generate_individual_plots(
                             range(len(errors)),
                             errors,
                             color=colors_target[target_idx],
+                            linestyle=line_styles.get(algorithm_name, "-"),
                             label=f"Target {target_idx} ({algorithm_name})",
                             linewidth=2,
                         )
