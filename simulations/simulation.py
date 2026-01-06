@@ -6,6 +6,7 @@ import math
 import matplotlib.pyplot as plt
 import pickle
 import hashlib
+import time
 
 from enum import Enum
 from matplotlib.animation import FuncAnimation, PillowWriter
@@ -86,7 +87,8 @@ class Simulation:
     def add_linear_target(
         self, obj_id: int, area_size: float = 50
     ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-        seed: str = hashlib.sha256(f"linear_{obj_id}".encode()).hexdigest()
+        timestamp: float = time.time()
+        seed: str = hashlib.sha256(f"linear_{obj_id}_{timestamp}".encode()).hexdigest()
         random_state: Any = random.getstate()
         random.seed(seed)
 
@@ -109,7 +111,8 @@ class Simulation:
     def add_random_walk_target(
         self, obj_id: int, area_size: float = 50
     ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-        seed: str = hashlib.sha256(f"random_walk_{obj_id}".encode()).hexdigest()
+        timestamp: float = time.time()
+        seed: str = hashlib.sha256(f"linear_{obj_id}_{timestamp}".encode()).hexdigest()
         random_state: Any = random.getstate()
         random.seed(seed)
 
