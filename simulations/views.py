@@ -98,18 +98,29 @@ def results_view(request: HttpRequest) -> HttpResponse:
         "plots": plots_data,
         "results": results,
         "sensors": list(range(num_sensors)),
+        "targets": list(range(num_linear_targets + num_random_targets)),
         "algorithms": algorithms,
         "simulation_params": params,
     }
 
     selected_sensor: Optional[str] = request.GET.get("sensor")
-    if selected_sensor is not None and selected_sensor != "":
-        selected_sensor_int: int = int(selected_sensor)
-        sensor_plots: Dict[str, str] = generate_sensor_plots(
-            sim, results, spsa_input, selected_sensor_int
+    selected_target: Optional[str] = request.GET.get("target")
+
+    if (selected_sensor is not None and selected_sensor != "") or (
+        selected_target is not None and selected_target != ""
+    ):
+        sensor_int: Optional[int] = (
+            int(selected_sensor) if selected_sensor and selected_sensor != "" else None
         )
-        context["sensor_plots"] = sensor_plots
-        context["selected_sensor"] = selected_sensor_int
+        target_int: Optional[int] = (
+            int(selected_target) if selected_target and selected_target != "" else None
+        )
+        individual_plots: Dict[str, str] = generate_individual_plots(
+            sim, results, spsa_input, sensor_int, target_int
+        )
+        context["individual_plots"] = individual_plots
+        context["selected_sensor"] = sensor_int
+        context["selected_target"] = target_int
 
     return render(request, "simulations/results.html", context)
 
@@ -321,207 +332,438 @@ def generate_plots(
     plots["convergence"] = base64.b64encode(buffer.getvalue()).decode()
     plt.close()
 
-    return plots
-
-
-def generate_sensor_plots(
-    sim: Simulation, results: Dict[str, Any], spsa_input: Dict[str, Any], sensor_id: int
-) -> Dict[str, str]:
-    plots: Dict[str, str] = {}
-
-    plt.figure(figsize=(12, 8))
-
-    colors: np.ndarray = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
-
-    for i, target in enumerate(sim.targets):
-        positions: List[Any] = [
-            sim.get_target_position(target, t)
-            for t in sim.simulation_data["time_points"]
-        ]
-        x_vals: List[float] = [p[0] for p in positions]
-        y_vals: List[float] = [p[1] for p in positions]
-        plt.plot(
-            x_vals,
-            y_vals,
-            color=colors[i],
-            linewidth=3,
-            label=f"Target {target.id} (True)",
-            alpha=0.7,
-        )
-
-        plt.scatter(
-            x_vals[0],
-            y_vals[0],
-            color=colors[i],
-            s=180,
-            marker="D",
-            edgecolors="black",
-            linewidth=2,
-            zorder=5,
-        )
-
-        plt.scatter(
-            x_vals[-1],
-            y_vals[-1],
-            color=colors[i],
-            s=180,
-            marker="X",
-            edgecolors="black",
-            linewidth=2,
-            zorder=5,
-        )
-
-    for algorithm_name, algorithm_results in results.items():
-        for target_id in algorithm_results[0][0].keys():
-            sensor_estimates: List[np.ndarray] = []
-            for time_iter in algorithm_results.values():
-                estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
-                if sensor_id in estimates_at_time:
-                    sensor_estimates.append(estimates_at_time[sensor_id])
-
-            if sensor_estimates:
-                x_vals: List[float] = [est[0] for est in sensor_estimates]
-                y_vals: List[float] = [est[1] for est in sensor_estimates]
-
-                plt.plot(
-                    x_vals,
-                    y_vals,
-                    "--",
-                    color=colors[target_id],
-                    linewidth=2,
-                    label=f"Target {target_id} (Sensor {sensor_id} Est.)",
-                    alpha=0.8,
-                )
-
-                plt.scatter(
-                    x_vals[0],
-                    y_vals[0],
-                    color=colors[target_id],
-                    s=120,
-                    marker="s",
-                    edgecolors="black",
-                    linewidth=2,
-                    zorder=5,
-                )
-
-                plt.scatter(
-                    x_vals[-1],
-                    y_vals[-1],
-                    color=colors[target_id],
-                    s=120,
-                    marker="o",
-                    edgecolors="black",
-                    linewidth=2,
-                    zorder=5,
-                )
-
-    sensor_pos: Optional[Tuple[float, float]] = None
-    for sensor in sim.sensors:
-        if sensor.id == sensor_id:
-            sensor_pos = sensor.position
-            plt.scatter(
-                sensor.position[0],
-                sensor.position[1],
-                color="red",
-                s=200,
-                marker="^",
-                label=f"Sensor {sensor.id}",
-                edgecolors="black",
-                zorder=5,
-            )
-            plt.annotate(
-                f"S{sensor.id}",
-                (sensor.position[0], sensor.position[1]),
-                xytext=(5, 5),
-                textcoords="offset points",
-                fontweight="bold",
-                fontsize=12,
-            )
-
-    plt.scatter(
-        [],
-        [],
-        c="white",
-        s=180,
-        marker="D",
-        edgecolors="black",
-        linewidth=2,
-        label="Start (True)",
-    )
-    plt.scatter(
-        [],
-        [],
-        c="white",
-        s=180,
-        marker="X",
-        edgecolors="black",
-        linewidth=2,
-        label="End (True)",
-    )
-    plt.scatter(
-        [],
-        [],
-        c="white",
-        s=120,
-        marker="s",
-        edgecolors="black",
-        linewidth=2,
-        label="Start (Est.)",
-    )
-    plt.scatter(
-        [],
-        [],
-        c="white",
-        s=120,
-        marker="o",
-        edgecolors="black",
-        linewidth=2,
-        label="End (Est.)",
-    )
-
-    plt.xlabel("X coordinate")
-    plt.ylabel("Y coordinate")
-    plt.title(f"True Trajectories and Sensor {sensor_id} Estimates")
-    plt.grid(True, alpha=0.3)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    plt.tight_layout()
-
-    buffer: io.BytesIO = io.BytesIO()
-    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
-    buffer.seek(0)
-    plots["sensor_trajectories"] = base64.b64encode(buffer.getvalue()).decode()
-    plt.close()
-
     plt.figure(figsize=(12, 8))
 
     for algorithm_name, algorithm_results in results.items():
-        errors_over_time: Dict[int, List[float]] = {
-            target_id: [] for target_id in algorithm_results[0][0].keys()
-        }
+        aggregated_errors: List[float] = []
 
         for time_iter in algorithm_results.values():
             true_positions: Dict[int, np.ndarray] = time_iter[0]
             estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
 
+            iteration_errors: List[float] = []
             for target_id, true_pos in true_positions.items():
-                if sensor_id in estimates[target_id]:
-                    sensor_est: np.ndarray = estimates[target_id][sensor_id]
+                sensor_estimates: Dict[int, np.ndarray] = estimates[target_id]
+                for sensor_est in sensor_estimates.values():
                     error: float = np.linalg.norm(sensor_est - true_pos)
-                    errors_over_time[target_id].append(error)
+                    iteration_errors.append(error)
 
-        for target_id, errors in errors_over_time.items():
-            if errors:
-                plt.plot(
-                    range(len(errors)),
-                    errors,
-                    color=colors[target_id],
-                    label=f"Target {target_id} (Sensor {sensor_id})",
-                    linewidth=2,
-                )
+            avg_error: float = np.mean(iteration_errors) if iteration_errors else 0.0
+            aggregated_errors.append(avg_error)
+
+        plt.plot(
+            range(len(aggregated_errors)),
+            aggregated_errors,
+            label=algorithm_name,
+            linewidth=2,
+        )
 
     plt.xlabel("Iteration")
-    plt.ylabel(f"Error (Sensor {sensor_id})")
-    plt.title(f"Convergence Error for Each Target - Sensor {sensor_id}")
+    plt.ylabel("Aggregated Error (All Targets & Sensors)")
+    plt.title("Aggregated Error Convergence")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    plots["aggregated"] = base64.b64encode(buffer.getvalue()).decode()
+    plt.close()
+
+    return plots
+
+
+def generate_individual_plots(
+    sim: Simulation,
+    results: Dict[str, Any],
+    spsa_input: Dict[str, Any],
+    sensor_id: Optional[int] = None,
+    target_id: Optional[int] = None,
+) -> Dict[str, str]:
+    plots: Dict[str, str] = {}
+
+    plt.figure(figsize=(12, 8))
+
+    if target_id is not None:
+        colors: np.ndarray = plt.cm.tab10(np.linspace(0, 1, len(sim.sensors)))
+
+        target_obj = next((t for t in sim.targets if t.id == target_id), None)
+        if target_obj:
+            positions: List[Any] = [
+                sim.get_target_position(target_obj, t)
+                for t in sim.simulation_data["time_points"]
+            ]
+            x_vals: List[float] = [p[0] for p in positions]
+            y_vals: List[float] = [p[1] for p in positions]
+            plt.plot(
+                x_vals,
+                y_vals,
+                color="black",
+                linewidth=4,
+                label=f"Target {target_id} (True)",
+                alpha=0.7,
+            )
+
+            plt.scatter(
+                x_vals[0],
+                y_vals[0],
+                color="black",
+                s=200,
+                marker="D",
+                edgecolors="white",
+                linewidth=2,
+                zorder=5,
+            )
+
+            plt.scatter(
+                x_vals[-1],
+                y_vals[-1],
+                color="black",
+                s=200,
+                marker="X",
+                edgecolors="white",
+                linewidth=2,
+                zorder=5,
+            )
+
+        for algorithm_name, algorithm_results in results.items():
+            if sensor_id is not None:
+                sensor_estimates: List[np.ndarray] = []
+                for time_iter in algorithm_results.values():
+                    estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
+                    if sensor_id in estimates_at_time:
+                        sensor_estimates.append(estimates_at_time[sensor_id])
+
+                if sensor_estimates:
+                    x_vals: List[float] = [est[0] for est in sensor_estimates]
+                    y_vals: List[float] = [est[1] for est in sensor_estimates]
+
+                    plt.plot(
+                        x_vals,
+                        y_vals,
+                        "--",
+                        color=colors[sensor_id % len(colors)],
+                        linewidth=2,
+                        label=f"Sensor {sensor_id} ({algorithm_name} Est.)",
+                        alpha=0.8,
+                    )
+
+                    plt.scatter(
+                        x_vals[0],
+                        y_vals[0],
+                        color=colors[sensor_id % len(colors)],
+                        s=120,
+                        marker="s",
+                        edgecolors="black",
+                        linewidth=2,
+                        zorder=5,
+                    )
+
+                    plt.scatter(
+                        x_vals[-1],
+                        y_vals[-1],
+                        color=colors[sensor_id % len(colors)],
+                        s=120,
+                        marker="o",
+                        edgecolors="black",
+                        linewidth=2,
+                        zorder=5,
+                    )
+            else:
+                for sensor_idx in range(len(sim.sensors)):
+                    sensor_estimates: List[np.ndarray] = []
+                    for time_iter in algorithm_results.values():
+                        estimates_at_time: Dict[int, np.ndarray] = time_iter[1][
+                            target_id
+                        ]
+                        if sensor_idx in estimates_at_time:
+                            sensor_estimates.append(estimates_at_time[sensor_idx])
+
+                    if sensor_estimates:
+                        x_vals: List[float] = [est[0] for est in sensor_estimates]
+                        y_vals: List[float] = [est[1] for est in sensor_estimates]
+
+                        plt.plot(
+                            x_vals,
+                            y_vals,
+                            "--",
+                            color=colors[sensor_idx],
+                            linewidth=2,
+                            label=f"Sensor {sensor_idx} ({algorithm_name} Est.)",
+                            alpha=0.8,
+                        )
+
+                        plt.scatter(
+                            x_vals[0],
+                            y_vals[0],
+                            color=colors[sensor_idx],
+                            s=120,
+                            marker="s",
+                            edgecolors="black",
+                            linewidth=2,
+                            zorder=5,
+                        )
+
+                        plt.scatter(
+                            x_vals[-1],
+                            y_vals[-1],
+                            color=colors[sensor_idx],
+                            s=120,
+                            marker="o",
+                            edgecolors="black",
+                            linewidth=2,
+                            zorder=5,
+                        )
+
+        for i, sensor in enumerate(sim.sensors):
+            if sensor_id is None or sensor.id == sensor_id:
+                plt.scatter(
+                    sensor.position[0],
+                    sensor.position[1],
+                    color=colors[i],
+                    s=150,
+                    marker="^",
+                    label=f"Sensor {sensor.id}",
+                    edgecolors="black",
+                    zorder=5,
+                )
+                plt.annotate(
+                    f"S{sensor.id}",
+                    (sensor.position[0], sensor.position[1]),
+                    xytext=(5, 5),
+                    textcoords="offset points",
+                    fontweight="bold",
+                )
+
+        title_suffix = ""
+        if sensor_id is not None and target_id is not None:
+            title_suffix = f" - Sensor {sensor_id} & Target {target_id}"
+        elif target_id is not None:
+            title_suffix = f" - Target {target_id}"
+
+        plt.xlabel("X coordinate")
+        plt.ylabel("Y coordinate")
+        plt.title(f"Trajectories{title_suffix}")
+        plt.grid(True, alpha=0.3)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+        plt.tight_layout()
+    else:
+        colors: np.ndarray = plt.cm.tab10(np.linspace(0, 1, len(sim.targets)))
+
+        for i, target in enumerate(sim.targets):
+            positions: List[Any] = [
+                sim.get_target_position(target, t)
+                for t in sim.simulation_data["time_points"]
+            ]
+            x_vals: List[float] = [p[0] for p in positions]
+            y_vals: List[float] = [p[1] for p in positions]
+            plt.plot(
+                x_vals,
+                y_vals,
+                color=colors[i],
+                linewidth=3,
+                label=f"Target {target.id} (True)",
+                alpha=0.7,
+            )
+
+            plt.scatter(
+                x_vals[0],
+                y_vals[0],
+                color=colors[i],
+                s=180,
+                marker="D",
+                edgecolors="black",
+                linewidth=2,
+                zorder=5,
+            )
+
+            plt.scatter(
+                x_vals[-1],
+                y_vals[-1],
+                color=colors[i],
+                s=180,
+                marker="X",
+                edgecolors="black",
+                linewidth=2,
+                zorder=5,
+            )
+
+        for algorithm_name, algorithm_results in results.items():
+            if sensor_id is not None:
+                for target_idx in algorithm_results[0][0].keys():
+                    sensor_estimates: List[np.ndarray] = []
+                    for time_iter in algorithm_results.values():
+                        estimates_at_time: Dict[int, np.ndarray] = time_iter[1][
+                            target_idx
+                        ]
+                        if sensor_id in estimates_at_time:
+                            sensor_estimates.append(estimates_at_time[sensor_id])
+
+                    if sensor_estimates:
+                        x_vals: List[float] = [est[0] for est in sensor_estimates]
+                        y_vals: List[float] = [est[1] for est in sensor_estimates]
+
+                        plt.plot(
+                            x_vals,
+                            y_vals,
+                            "--",
+                            color=colors[target_idx],
+                            linewidth=2,
+                            label=f"Target {target_idx} (Sensor {sensor_id} Est.)",
+                            alpha=0.8,
+                        )
+
+                        plt.scatter(
+                            x_vals[0],
+                            y_vals[0],
+                            color=colors[target_idx],
+                            s=120,
+                            marker="s",
+                            edgecolors="black",
+                            linewidth=2,
+                            zorder=5,
+                        )
+
+                        plt.scatter(
+                            x_vals[-1],
+                            y_vals[-1],
+                            color=colors[target_idx],
+                            s=120,
+                            marker="o",
+                            edgecolors="black",
+                            linewidth=2,
+                            zorder=5,
+                        )
+
+        for i, sensor in enumerate(sim.sensors):
+            if sensor_id is None or sensor.id == sensor_id:
+                plt.scatter(
+                    sensor.position[0],
+                    sensor.position[1],
+                    color="red",
+                    s=150,
+                    marker="^",
+                    label=f"Sensor {sensor.id}",
+                    edgecolors="black",
+                    zorder=5,
+                )
+                plt.annotate(
+                    f"S{sensor.id}",
+                    (sensor.position[0], sensor.position[1]),
+                    xytext=(5, 5),
+                    textcoords="offset points",
+                    fontweight="bold",
+                )
+
+        title_suffix = ""
+        if sensor_id is not None:
+            title_suffix = f" - Sensor {sensor_id}"
+
+        plt.xlabel("X coordinate")
+        plt.ylabel("Y coordinate")
+        plt.title(f"Trajectories{title_suffix}")
+        plt.grid(True, alpha=0.3)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+        plt.tight_layout()
+
+    buffer: io.BytesIO = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    plots["individual_trajectories"] = base64.b64encode(buffer.getvalue()).decode()
+    plt.close()
+
+    plt.figure(figsize=(12, 8))
+
+    for algorithm_name, algorithm_results in results.items():
+        if target_id is not None:
+            if sensor_id is not None:
+                errors: List[float] = []
+                for time_iter in algorithm_results.values():
+                    true_positions: Dict[int, np.ndarray] = time_iter[0]
+                    estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
+
+                    if target_id in true_positions and target_id in estimates:
+                        if sensor_id in estimates[target_id]:
+                            true_pos: np.ndarray = true_positions[target_id]
+                            sensor_est: np.ndarray = estimates[target_id][sensor_id]
+                            error: float = np.linalg.norm(sensor_est - true_pos)
+                            errors.append(error)
+
+                if errors:
+                    plt.plot(
+                        range(len(errors)),
+                        errors,
+                        label=f"Sensor {sensor_id} ({algorithm_name})",
+                        linewidth=2,
+                    )
+            else:
+                colors_sensor: np.ndarray = plt.cm.tab10(
+                    np.linspace(0, 1, len(sim.sensors))
+                )
+                for sensor_idx in range(len(sim.sensors)):
+                    errors: List[float] = []
+                    for time_iter in algorithm_results.values():
+                        true_positions: Dict[int, np.ndarray] = time_iter[0]
+                        estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
+
+                        if target_id in true_positions and target_id in estimates:
+                            if sensor_idx in estimates[target_id]:
+                                true_pos: np.ndarray = true_positions[target_id]
+                                sensor_est: np.ndarray = estimates[target_id][
+                                    sensor_idx
+                                ]
+                                error: float = np.linalg.norm(sensor_est - true_pos)
+                                errors.append(error)
+
+                    if errors:
+                        plt.plot(
+                            range(len(errors)),
+                            errors,
+                            color=colors_sensor[sensor_idx],
+                            label=f"Sensor {sensor_idx} ({algorithm_name})",
+                            linewidth=2,
+                        )
+        else:
+            if sensor_id is not None:
+                colors_target: np.ndarray = plt.cm.tab10(
+                    np.linspace(0, 1, len(sim.targets))
+                )
+                for target_idx in algorithm_results[0][0].keys():
+                    errors: List[float] = []
+                    for time_iter in algorithm_results.values():
+                        true_positions: Dict[int, np.ndarray] = time_iter[0]
+                        estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
+
+                        if target_idx in true_positions and target_idx in estimates:
+                            if sensor_id in estimates[target_idx]:
+                                true_pos: np.ndarray = true_positions[target_idx]
+                                sensor_est: np.ndarray = estimates[target_idx][
+                                    sensor_id
+                                ]
+                                error: float = np.linalg.norm(sensor_est - true_pos)
+                                errors.append(error)
+
+                    if errors:
+                        plt.plot(
+                            range(len(errors)),
+                            errors,
+                            color=colors_target[target_idx],
+                            label=f"Target {target_idx} ({algorithm_name})",
+                            linewidth=2,
+                        )
+
+    title_suffix = ""
+    if sensor_id is not None and target_id is not None:
+        title_suffix = f" - Sensor {sensor_id} & Target {target_id}"
+    elif sensor_id is not None:
+        title_suffix = f" - Sensor {sensor_id}"
+    elif target_id is not None:
+        title_suffix = f" - Target {target_id}"
+
+    plt.xlabel("Iteration")
+    plt.ylabel("Error")
+    plt.title(f"Convergence Error{title_suffix}")
     plt.grid(True, alpha=0.3)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
@@ -529,7 +771,7 @@ def generate_sensor_plots(
     buffer = io.BytesIO()
     plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
     buffer.seek(0)
-    plots["sensor_convergence"] = base64.b64encode(buffer.getvalue()).decode()
+    plots["individual_convergence"] = base64.b64encode(buffer.getvalue()).decode()
     plt.close()
 
     return plots

@@ -22,10 +22,8 @@ class Original_SPSA:
             true_targets_position
         )
         self.distances: Optional[Dict[int, Dict[int, float]]] = distances
-        # Coordinates from the previous iteration of some random coordinates for the 1st iteration
         self.init_coords: Optional[Dict[int, Dict[int, np.ndarray]]] = init_coords
 
-        # Algorithm specific variables from the paper
         self.dimensions: int = 2
         self.beta_1: float = 0.5
         self.beta_2: float = 0.5
@@ -86,7 +84,7 @@ class Original_SPSA:
         theta_new: Dict[int, Dict[int, np.ndarray]] = {}
         err: float = 0
 
-        for l in self.target_ids:  # noqa: E741
+        for l in self.target_ids:
             theta_new[l] = {}
             neighbors: Dict[int, List[int]] = self._get_random_neibors(weight, 2)
 
@@ -196,8 +194,6 @@ class Original_SPSA:
 
         return neibors
 
-    # The format of the result dictionary will be the same
-    # for the future algorithms
     def run_n_iterations(self, data: Dict[int, Any]) -> Dict[int, Any]:
         result: Dict[int, Any] = defaultdict()
         for iteration in data.keys():

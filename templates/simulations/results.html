@@ -25,6 +25,12 @@
             max-width: 100%;
             height: auto;
         }
+        .tab-content {
+            padding-top: 20px;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -50,65 +56,99 @@
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h3 class="card-title">View Specific Sensor</h3>
-                        <form method="get" class="row g-3 align-items-end">
-                            <div class="col-md-6">
-                                <label for="sensorSelect" class="form-label">Select Sensor:</label>
-                                <select class="form-select" id="sensorSelect" name="sensor">
-                                    <option value="">All Sensors (Default)</option>
-                                    {% for sensor in sensors %}
-                                    <option value="{{ sensor }}" {% if selected_sensor == sensor %}selected{% endif %}>
-                                        Sensor {{ sensor }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                <ul class="nav nav-tabs" id="viewTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">Overall View</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab">Individual View</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="viewTabsContent">
+                    <div class="tab-pane fade show active" id="all" role="tabpanel">
+                        <h2 class="mb-4">Overall Analysis</h2>
+                        
+                        <div class="row mb-4">
+                            <div class="col-lg-6">
+                                <div class="plot-container">
+                                    <h3>True Trajectories and Algorithm Estimates</h3>
+                                    <img src="data:image/png;base64,{{ plots.trajectories }}" alt="Trajectories Plot">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <button type="submit" class="btn btn-success">View Sensor</button>
+                            <div class="col-lg-6">
+                                <div class="plot-container">
+                                    <h3>Convergence Error (Average All Sensors)</h3>
+                                    <img src="data:image/png;base64,{{ plots.convergence }}" alt="Convergence Plot">
+                                </div>
                             </div>
-                        </form>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="plot-container">
+                                    <h3>Aggregated Error (All Targets & Sensors)</h3>
+                                    <img src="data:image/png;base64,{{ plots.aggregated }}" alt="Aggregated Error Plot">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="individual" role="tabpanel">
+                        <h2 class="mb-4">Individual View</h2>
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <form method="get" class="row g-3 align-items-end">
+                                    <div class="col-md-5">
+                                        <label for="sensorSelect" class="form-label">Select Sensor:</label>
+                                        <select class="form-select" id="sensorSelect" name="sensor">
+                                            <option value="">All Sensors</option>
+                                            {% for sensor in sensors %}
+                                            <option value="{{ sensor }}" {% if selected_sensor == sensor %}selected{% endif %}>
+                                                Sensor {{ sensor }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label for="targetSelect" class="form-label">Select Target:</label>
+                                        <select class="form-select" id="targetSelect" name="target">
+                                            <option value="">All Targets</option>
+                                            {% for target in targets %}
+                                            <option value="{{ target }}" {% if selected_target == target %}selected{% endif %}>
+                                                Target {{ target }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-success">Apply</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        {% if individual_plots %}
+                        <h3>Individual Analysis</h3>
+                        <div class="row mb-4">
+                            <div class="col-lg-6">
+                                <div class="plot-container">
+                                    <h4>Trajectories</h4>
+                                    <img src="data:image/png;base64,{{ individual_plots.individual_trajectories }}" alt="Individual Trajectories">
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="plot-container">
+                                    <h4>Convergence Error</h4>
+                                    <img src="data:image/png;base64,{{ individual_plots.individual_convergence }}" alt="Individual Convergence">
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                {% if selected_sensor is not None %}
-                <h2 class="mb-4">Sensor {{ selected_sensor }} Analysis</h2>
-
-                <div class="row mb-4">
-                    <div class="col-lg-6">
-                        <div class="plot-container">
-                            <h3>Trajectories - Sensor {{ selected_sensor }} Estimates</h3>
-                            <img src="data:image/png;base64,{{ sensor_plots.sensor_trajectories }}" alt="Sensor Trajectories">
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="plot-container">
-                            <h3>Convergence Error - Sensor {{ selected_sensor }}</h3>
-                            <img src="data:image/png;base64,{{ sensor_plots.sensor_convergence }}" alt="Sensor Convergence">
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <h2 class="mb-4">Overall Analysis</h2>
-
-                <div class="row mb-4">
-                    <div class="col-lg-6">
-                        <div class="plot-container">
-                            <h3>True Trajectories and Algorithm Estimates</h3>
-                            <img src="data:image/png;base64,{{ plots.trajectories }}" alt="Trajectories Plot">
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="plot-container">
-                            <h3>Convergence Error (Average All Sensors)</h3>
-                            <img src="data:image/png;base64,{{ plots.convergence }}" alt="Convergence Plot">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-grid">
+                <div class="d-grid mt-4">
                     <a href="{% url 'setup' %}" class="btn btn-secondary">Run New Simulation</a>
                 </div>
             </div>
@@ -116,5 +156,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sensorParam = urlParams.get('sensor');
+            const targetParam = urlParams.get('target');
+            
+            if ((sensorParam !== null && sensorParam !== '') || (targetParam !== null && targetParam !== '')) {
+                const individualTab = document.getElementById('individual-tab');
+                if (individualTab) {
+                    const tab = new bootstrap.Tab(individualTab);
+                    tab.show();
+                }
+            }
+        });
+    </script>
 </body>
 </html>

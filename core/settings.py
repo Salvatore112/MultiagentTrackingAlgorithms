@@ -29,24 +29,24 @@ SECRET_KEY = "django-insecure-temporary-key-for-dev-only-12345"
 DEBUG: bool = True
 
 if DEBUG:
-    ALLOWED_HOSTS = ['*']
+    ALLOWED_HOSTS = ["*"]
     CSRF_TRUSTED_ORIGINS = [
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'https://multiagenttrackingalgorithms.onrender.com',  # Add Render URL even in debug
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://multiagenttrackingalgorithms.onrender.com",  # Add Render URL even in debug
     ]
 else:
     ALLOWED_HOSTS = [
-        'multiagenttrackingalgorithms.onrender.com',
-        '.onrender.com',  # Allows all render subdomains
-        'localhost',
-        '127.0.0.1',
+        "multiagenttrackingalgorithms.onrender.com",
+        ".onrender.com",  # Allows all render subdomains
+        "localhost",
+        "127.0.0.1",
     ]
     CSRF_TRUSTED_ORIGINS = [
-        'https://multiagenttrackingalgorithms.onrender.com',
-        'https://*.onrender.com',  # Allow all Render subdomains
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
+        "https://multiagenttrackingalgorithms.onrender.com",
+        "https://*.onrender.com",  # Allow all Render subdomains
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ]
 
 # Application definition
