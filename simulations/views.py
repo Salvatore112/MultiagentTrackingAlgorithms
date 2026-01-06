@@ -68,6 +68,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
     all_results: Dict[int, Dict[str, Any]] = {}
     all_simulations: Dict[int, Simulation] = {}
+    all_initial_estimates: Dict[int, Dict[int, Dict[int, np.ndarray]]] = {}
 
     for run_id in range(num_runs):
         sim: Simulation = Simulation(
@@ -88,6 +89,8 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
         sim.run_simulation()
         spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
+
+        all_initial_estimates[run_id] = spsa_input["init_coords"]
 
         results: Dict[str, Any] = {}
         if "original_spsa" in algorithms:
@@ -133,16 +136,21 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
     if num_runs == 1:
         plots_data = generate_plots(
-            all_simulations[0], all_results[0], selected_run, num_runs
+            all_simulations[0],
+            all_results[0],
+            all_initial_estimates[0],
+            selected_run,
+            num_runs,
         )
     else:
         aggregated_plots = generate_aggregated_plots(
-            all_simulations, all_results, num_runs
+            all_simulations, all_results, all_initial_estimates, num_runs
         )
         if selected_run < num_runs:
             plots_data = generate_plots(
                 all_simulations[selected_run],
                 all_results[selected_run],
+                all_initial_estimates[selected_run],
                 selected_run,
                 num_runs,
             )
@@ -172,6 +180,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
         individual_plots: Dict[str, str] = generate_individual_plots(
             all_simulations[selected_run],
             all_results[selected_run],
+            all_initial_estimates[selected_run],
             sensor_int,
             target_int,
             selected_run,
@@ -184,7 +193,11 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
 
 def generate_plots(
-    sim: Simulation, results: Dict[str, Any], run_id: int, num_runs: int
+    sim: Simulation,
+    results: Dict[str, Any],
+    init_coords: Dict[int, Dict[int, np.ndarray]],
+    run_id: int,
+    num_runs: int,
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -234,6 +247,10 @@ def generate_plots(
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
             target_estimates: List[np.ndarray] = []
+
+            initial_est = init_coords[target_id][0]
+            target_estimates.append(initial_est)
+
             for time_iter in algorithm_results.values():
                 estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
                 avg_estimate: np.ndarray = np.mean(
@@ -362,6 +379,12 @@ def generate_plots(
             target_id: [] for target_id in algorithm_results[0][0].keys()
         }
 
+        for target_id in algorithm_results[0][0].keys():
+            initial_est = init_coords[target_id][0]
+            true_pos = algorithm_results[0][0][target_id]
+            initial_error = np.linalg.norm(initial_est - true_pos)
+            errors_over_time[target_id].append(initial_error)
+
         for time_iter in algorithm_results.values():
             true_positions: Dict[int, np.ndarray] = time_iter[0]
             estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
@@ -385,7 +408,7 @@ def generate_plots(
                 linewidth=2,
             )
 
-    plt.xlabel("Iteration")
+    plt.xlabel("Iteration (including initial)")
     plt.ylabel("Average Error (All Sensors)")
     if num_runs > 1:
         plt.title(f"Convergence Error for Each Target (Run {run_id + 1}/{num_runs})")
@@ -407,6 +430,7 @@ def generate_plots(
 def generate_aggregated_plots(
     all_simulations: Dict[int, Simulation],
     all_results: Dict[int, Dict[str, Any]],
+    all_initial_estimates: Dict[int, Dict[int, Dict[int, np.ndarray]]],
     num_runs: int,
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
@@ -422,6 +446,20 @@ def generate_aggregated_plots(
             if run_id in all_results and algorithm_name in all_results[run_id]:
                 algorithm_results = all_results[run_id][algorithm_name]
                 errors_over_time: List[float] = []
+
+                init_coords = all_initial_estimates[run_id]
+
+                initial_iteration_errors: List[float] = []
+                for target_id, true_pos in algorithm_results[0][0].items():
+                    initial_est = init_coords[target_id][0]
+                    error: float = np.linalg.norm(initial_est - true_pos)
+                    initial_iteration_errors.append(error)
+                initial_avg_error = (
+                    np.mean(initial_iteration_errors)
+                    if initial_iteration_errors
+                    else 0.0
+                )
+                errors_over_time.append(initial_avg_error)
 
                 for time_iter in algorithm_results.values():
                     true_positions: Dict[int, np.ndarray] = time_iter[0]
@@ -472,7 +510,7 @@ def generate_aggregated_plots(
             alpha=0.2,
         )
 
-    plt.xlabel("Iteration")
+    plt.xlabel("Iteration (including initial)")
     plt.ylabel("Aggregated Error (Mean ± Std)")
     plt.title(f"Aggregated Error Convergence ({num_runs} Runs)")
     plt.grid(True, alpha=0.3)
@@ -491,6 +529,7 @@ def generate_aggregated_plots(
 def generate_individual_plots(
     sim: Simulation,
     results: Dict[str, Any],
+    init_coords: Dict[int, Dict[int, np.ndarray]],
     sensor_id: Optional[int] = None,
     target_id: Optional[int] = None,
     run_id: int = 0,
@@ -545,6 +584,10 @@ def generate_individual_plots(
         for algorithm_name, algorithm_results in results.items():
             if sensor_id is not None:
                 sensor_estimates: List[np.ndarray] = []
+
+                initial_est = init_coords[target_id][sensor_id]
+                sensor_estimates.append(initial_est)
+
                 for time_iter in algorithm_results.values():
                     estimates_at_time: Dict[int, np.ndarray] = time_iter[1][target_id]
                     if sensor_id in estimates_at_time:
@@ -588,6 +631,10 @@ def generate_individual_plots(
             else:
                 for sensor_idx in range(len(sim.sensors)):
                     sensor_estimates: List[np.ndarray] = []
+
+                    initial_est = init_coords[target_id][sensor_idx]
+                    sensor_estimates.append(initial_est)
+
                     for time_iter in algorithm_results.values():
                         estimates_at_time: Dict[int, np.ndarray] = time_iter[1][
                             target_id
@@ -711,6 +758,10 @@ def generate_individual_plots(
             if sensor_id is not None:
                 for target_idx in algorithm_results[0][0].keys():
                     sensor_estimates: List[np.ndarray] = []
+
+                    initial_est = init_coords[target_idx][sensor_id]
+                    sensor_estimates.append(initial_est)
+
                     for time_iter in algorithm_results.values():
                         estimates_at_time: Dict[int, np.ndarray] = time_iter[1][
                             target_idx
@@ -800,6 +851,12 @@ def generate_individual_plots(
         if target_id is not None:
             if sensor_id is not None:
                 errors: List[float] = []
+
+                initial_est = init_coords[target_id][sensor_id]
+                true_pos = algorithm_results[0][0][target_id]
+                initial_error = np.linalg.norm(initial_est - true_pos)
+                errors.append(initial_error)
+
                 for time_iter in algorithm_results.values():
                     true_positions: Dict[int, np.ndarray] = time_iter[0]
                     estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
@@ -825,6 +882,12 @@ def generate_individual_plots(
                 )
                 for sensor_idx in range(len(sim.sensors)):
                     errors: List[float] = []
+
+                    initial_est = init_coords[target_id][sensor_idx]
+                    true_pos = algorithm_results[0][0][target_id]
+                    initial_error = np.linalg.norm(initial_est - true_pos)
+                    errors.append(initial_error)
+
                     for time_iter in algorithm_results.values():
                         true_positions: Dict[int, np.ndarray] = time_iter[0]
                         estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
@@ -854,6 +917,12 @@ def generate_individual_plots(
                 )
                 for target_idx in algorithm_results[0][0].keys():
                     errors: List[float] = []
+
+                    initial_est = init_coords[target_idx][sensor_id]
+                    true_pos = algorithm_results[0][0][target_idx]
+                    initial_error = np.linalg.norm(initial_est - true_pos)
+                    errors.append(initial_error)
+
                     for time_iter in algorithm_results.values():
                         true_positions: Dict[int, np.ndarray] = time_iter[0]
                         estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
@@ -887,7 +956,7 @@ def generate_individual_plots(
 
     title_suffix += f" (Run {run_id + 1})"
 
-    plt.xlabel("Iteration")
+    plt.xlabel("Iteration (including initial)")
     plt.ylabel("Error")
     plt.title(f"Convergence Error{title_suffix}")
     plt.grid(True, alpha=0.3)
