@@ -61,6 +61,10 @@
                                     <input class="form-check-input" type="checkbox" id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
                                     <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
                                 </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="distributed_kalman" name="algorithms" value="distributed_kalman">
+                                    <label class="form-check-label" for="distributed_kalman">Distributed Kalman Filter</label>
+                                </div>
                             </div>
 
                             <div class="noise-section mt-4">
@@ -90,12 +94,12 @@
                             <h5 class="mb-3">Simulation Configuration</h5>
                             <div class="mb-3">
                                 <label for="duration" class="form-label">Simulation Duration (seconds)</label>
-                                <input type="number" class="form-control" id="duration" name="duration" value="50" min="10" max="200" required>
+                                <input type="number" class="form-control" id="duration" name="duration" value="50" min="1" required>
                             </div>
 
                             <div class="mb-3">
                                 <label for="num_sensors" class="form-label">Number of Sensors</label>
-                                <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3" min="1" max="10" required>
+                                <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3" min="1" required>
                             </div>
 
                             <div class="mb-3">
@@ -103,18 +107,18 @@
                                 <div class="row g-3 align-items-end">
                                     <div class="col-6">
                                         <label for="num_linear_targets" class="form-label small">Linear Targets</label>
-                                        <input type="number" class="form-control" id="num_linear_targets" name="num_linear_targets" value="2" min="0" max="10" required>
+                                        <input type="number" class="form-control" id="num_linear_targets" name="num_linear_targets" value="2" min="0" required>
                                     </div>
                                     <div class="col-6">
                                         <label for="num_random_targets" class="form-label small">Random Walk Targets</label>
-                                        <input type="number" class="form-control" id="num_random_targets" name="num_random_targets" value="2" min="0" max="10" required>
+                                        <input type="number" class="form-control" id="num_random_targets" name="num_random_targets" value="2" min="0" required>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label for="num_runs" class="form-label">Number of Simulation Runs</label>
-                                <input type="number" class="form-control" id="num_runs" name="num_runs" value="1" min="1" max="50" required>
+                                <input type="number" class="form-control" id="num_runs" name="num_runs" value="1" min="1" required>
                                 <div class="form-text">The simulation will run multiple times with different random seeds.</div>
                             </div>
                         </div>

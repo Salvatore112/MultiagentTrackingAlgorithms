@@ -117,6 +117,19 @@ def results_view(request: HttpRequest) -> HttpResponse:
                 data=spsa_input["data"]
             )
 
+        if "distributed_kalman" in algorithms:
+            from algorithms.distributed_kalman import Distributed_Kalman
+
+            dkf_test_obj = Distributed_Kalman(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
+            )
+            results["distributed_kalman"] = dkf_test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
         all_results[run_id] = results
         all_simulations[run_id] = sim
 
@@ -243,7 +256,11 @@ def generate_plots(
             zorder=5,
         )
 
-    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
+    line_styles = {
+        "original_spsa": "-",
+        "accelerated_spsa": ":",
+        "distributed_kalman": "--"
+    }
     for algorithm_name, algorithm_results in results.items():
         for target_id in algorithm_results[0][0].keys():
             target_estimates: List[np.ndarray] = []
@@ -373,7 +390,11 @@ def generate_plots(
 
     plt.figure(figsize=(12, 8))
 
-    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
+    line_styles = {
+        "original_spsa": "-",
+        "accelerated_spsa": ":",
+        "distributed_kalman": "--"
+    }
     for algorithm_name, algorithm_results in results.items():
         errors_over_time: Dict[int, List[float]] = {
             target_id: [] for target_id in algorithm_results[0][0].keys()
@@ -580,7 +601,11 @@ def generate_individual_plots(
                 zorder=5,
             )
 
-        line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
+        line_styles = {
+            "original_spsa": "-",
+            "accelerated_spsa": ":",
+            "distributed_kalman": "--"
+        }
         for algorithm_name, algorithm_results in results.items():
             if sensor_id is not None:
                 sensor_estimates: List[np.ndarray] = []
@@ -753,7 +778,11 @@ def generate_individual_plots(
                 zorder=5,
             )
 
-        line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
+        line_styles = {
+            "original_spsa": "-",
+            "accelerated_spsa": ":",
+            "distributed_kalman": "--"
+        }
         for algorithm_name, algorithm_results in results.items():
             if sensor_id is not None:
                 for target_idx in algorithm_results[0][0].keys():
@@ -846,7 +875,11 @@ def generate_individual_plots(
 
     plt.figure(figsize=(12, 8))
 
-    line_styles = {"original_spsa": "-", "accelerated_spsa": ":"}
+    line_styles = {
+        "original_spsa": "-",
+        "accelerated_spsa": ":",
+        "distributed_kalman": "--"
+    }
     for algorithm_name, algorithm_results in results.items():
         if target_id is not None:
             if sensor_id is not None:
