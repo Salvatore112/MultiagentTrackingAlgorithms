@@ -38,13 +38,7 @@ class Accelerated_SPSA:
         )
         self.Delta_abs_value: float = 1 / np.sqrt(self.dimensions)
 
-        max_condition_number: float = 0
-        while max_condition_number < 3:
-            weight: np.ndarray = self._generate_matrix(self.number_of_sensors)
-            condition_number: float = self._condition_number(weight)
-            if condition_number > max_condition_number:
-                max_condition_number = condition_number
-                self.weight: np.ndarray = weight
+        self.weight = None
 
     def _generate_matrix(self, n: int) -> np.ndarray:
         raw_mat: np.ndarray = np.random.rand(n, n)
@@ -68,7 +62,14 @@ class Accelerated_SPSA:
         return cond, weight
 
     def run_main_algorithm(self) -> Dict[int, Dict[int, np.ndarray]]:
-        _, weight = self._update_matrix()
+        if self.weight is None:
+            self.weight = np.eye(self.number_of_sensors) * (self.number_of_sensors - 1)
+            for i in range(self.number_of_sensors):
+                for j in range(self.number_of_sensors):
+                    if i != j:
+                        self.weight[i, j] = -1.0 / (self.number_of_sensors - 1)
+        
+        weight = self.weight
 
         errors: Dict = {}
 
