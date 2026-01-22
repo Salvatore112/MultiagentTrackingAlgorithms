@@ -13,9 +13,6 @@ from algorithms.original_spsa import Original_SPSA
 
 matplotlib.use("Agg")
 
-MAX_ERROR_THRESHOLD = 1000.0
-MAX_RETRIES = 5
-SEED_STABILITY_THRESHOLD = 50.0
 
 def setup_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -48,143 +45,6 @@ def setup_view(request: HttpRequest) -> HttpResponse:
 
     return render(request, "simulations/setup.html")
 
-def check_algorithm_stability(results: Dict[str, Any], algorithm_name: str) -> bool:
-    if algorithm_name not in results:
-        return True
-    
-    algorithm_results = results[algorithm_name]
-    max_error = 0.0
-    errors = []
-    
-    for time_iter in algorithm_results.values():
-        true_positions: Dict[int, np.ndarray] = time_iter[0]
-        estimates: Dict[int, Dict[int, np.ndarray]] = time_iter[1]
-        
-        for target_id, true_pos in true_positions.items():
-            sensor_estimates: Dict[int, np.ndarray] = estimates[target_id]
-            for sensor_est in sensor_estimates.values():
-                error: float = np.linalg.norm(sensor_est - true_pos)
-                max_error = max(max_error, error)
-                errors.append(error)
-    
-    if errors:
-        std_error = np.std(errors)
-        mean_error = np.mean(errors)
-        if std_error > SEED_STABILITY_THRESHOLD or mean_error > SEED_STABILITY_THRESHOLD * 2:
-            return False
-    
-    return max_error <= MAX_ERROR_THRESHOLD
-
-def run_simulation_with_stable_seed(duration: float, num_sensors: int, num_linear_targets: int, 
-                                    num_random_targets: int, algorithms: List[str], 
-                                    noise_config: Optional[Dict[str, Any]], 
-                                    initial_estimates_template: Optional[Dict[int, Dict[int, np.ndarray]]] = None,
-                                    seed_offset: int = 0) -> Tuple[Simulation, Dict[str, Any], Dict[int, Dict[int, np.ndarray]]]:
-    
-    for attempt in range(MAX_RETRIES):
-        import time
-        import hashlib
-        import random
-        
-        base_seed = hashlib.sha256(f"simulation_{seed_offset}_{attempt}".encode()).hexdigest()
-        
-        random.seed(int(base_seed[:8], 16))
-        np.random.seed(int(base_seed[8:16], 16))
-        
-        sim: Simulation = Simulation(
-            duration=duration, time_step=1.0, noise_config=noise_config
-        )
-
-        for i in range(num_sensors):
-            sim.add_uniform_sensor(i, area_size=50)
-
-        target_id: int = 0
-        for i in range(num_linear_targets):
-            sim.add_linear_target(target_id, area_size=50)
-            target_id += 1
-
-        for i in range(num_random_targets):
-            sim.add_random_walk_target(target_id, area_size=50)
-            target_id += 1
-
-        sim.run_simulation()
-        spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
-
-        if initial_estimates_template is not None:
-            spsa_input["init_coords"] = initial_estimates_template
-
-        results: Dict[str, Any] = {}
-        
-        stable_run = True
-        
-        if "original_spsa" in algorithms:
-            test_obj: Original_SPSA = Original_SPSA(
-                sensors_positions=spsa_input["sensors_positions"],
-                true_targets_position=spsa_input["data"][0][0],
-                distances=spsa_input["data"][0][1],
-                init_coords=spsa_input["init_coords"],
-            )
-            test_obj.weight = np.eye(num_sensors) * (num_sensors - 1)
-            for i in range(num_sensors):
-                for j in range(num_sensors):
-                    if i != j:
-                        test_obj.weight[i, j] = -1.0 / (num_sensors - 1)
-            
-            results["original_spsa"] = test_obj.run_n_iterations(
-                data=spsa_input["data"]
-            )
-            
-            if not check_algorithm_stability(results, "original_spsa"):
-                stable_run = False
-        
-        if stable_run and "accelerated_spsa" in algorithms:
-            from algorithms.accelerated_spsa import Accelerated_SPSA
-
-            acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
-                sensors_positions=spsa_input["sensors_positions"],
-                true_targets_position=spsa_input["data"][0][0],
-                distances=spsa_input["data"][0][1],
-                init_coords=spsa_input["init_coords"],
-            )
-            acc_test_obj.weight = np.eye(num_sensors) * (num_sensors - 1)
-            for i in range(num_sensors):
-                for j in range(num_sensors):
-                    if i != j:
-                        acc_test_obj.weight[i, j] = -1.0 / (num_sensors - 1)
-            
-            results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
-                data=spsa_input["data"]
-            )
-            
-            if not check_algorithm_stability(results, "accelerated_spsa"):
-                stable_run = False
-        
-        if stable_run and "distributed_kalman" in algorithms:
-            from algorithms.distributed_kalman import Distributed_Kalman
-            
-            dkf_test_obj = Distributed_Kalman(
-                sensors_positions=spsa_input["sensors_positions"],
-                true_targets_position=spsa_input["data"][0][0],
-                distances=spsa_input["data"][0][1],
-                init_coords=spsa_input["init_coords"],
-            )
-            dkf_test_obj.weight = np.eye(num_sensors) * (num_sensors - 1)
-            for i in range(num_sensors):
-                for j in range(num_sensors):
-                    if i != j:
-                        dkf_test_obj.weight[i, j] = -1.0 / (num_sensors - 1)
-            
-            results["distributed_kalman"] = dkf_test_obj.run_n_iterations(
-                data=spsa_input["data"]
-            )
-            
-            if not check_algorithm_stability(results, "distributed_kalman"):
-                stable_run = False
-        
-        if stable_run:
-            return sim, results, spsa_input["init_coords"]
-    
-    raise ValueError(f"Failed to get stable results after {MAX_RETRIES} attempts")
 
 def results_view(request: HttpRequest) -> HttpResponse:
     params: Dict[str, Any] = request.session.get("simulation_params", {})
@@ -209,33 +69,69 @@ def results_view(request: HttpRequest) -> HttpResponse:
     all_results: Dict[int, Dict[str, Any]] = {}
     all_simulations: Dict[int, Simulation] = {}
     all_initial_estimates: Dict[int, Dict[int, Dict[int, np.ndarray]]] = {}
-    
-    stable_initial_estimates: Optional[Dict[int, Dict[int, np.ndarray]]] = None
 
     for run_id in range(num_runs):
-        try:
-            sim, results, init_coords = run_simulation_with_stable_seed(
-                duration=duration,
-                num_sensors=num_sensors,
-                num_linear_targets=num_linear_targets,
-                num_random_targets=num_random_targets,
-                algorithms=algorithms,
-                noise_config=noise_config,
-                initial_estimates_template=stable_initial_estimates,
-                seed_offset=run_id
+        sim: Simulation = Simulation(
+            duration=duration, time_step=1.0, noise_config=noise_config
+        )
+
+        for i in range(num_sensors):
+            sim.add_uniform_sensor(i, area_size=50)
+
+        target_id: int = 0
+        for i in range(num_linear_targets):
+            sim.add_linear_target(target_id, area_size=50)
+            target_id += 1
+
+        for i in range(num_random_targets):
+            sim.add_random_walk_target(target_id, area_size=50)
+            target_id += 1
+
+        sim.run_simulation()
+        spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
+
+        all_initial_estimates[run_id] = spsa_input["init_coords"]
+
+        results: Dict[str, Any] = {}
+        if "original_spsa" in algorithms:
+            test_obj: Original_SPSA = Original_SPSA(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
             )
-            
-            all_initial_estimates[run_id] = init_coords
-            all_results[run_id] = results
-            all_simulations[run_id] = sim
-            
-            if stable_initial_estimates is None:
-                stable_initial_estimates = init_coords
-                
-        except ValueError as e:
-            all_results[run_id] = {}
-            all_simulations[run_id] = Simulation(duration=duration)
-            all_initial_estimates[run_id] = {}
+            results["original_spsa"] = test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
+        if "accelerated_spsa" in algorithms:
+            from algorithms.accelerated_spsa import Accelerated_SPSA
+
+            acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
+            )
+            results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
+        if "distributed_kalman" in algorithms:
+            from algorithms.distributed_kalman import Distributed_Kalman
+
+            dkf_test_obj = Distributed_Kalman(
+                sensors_positions=spsa_input["sensors_positions"],
+                true_targets_position=spsa_input["data"][0][0],
+                distances=spsa_input["data"][0][1],
+                init_coords=spsa_input["init_coords"],
+            )
+            results["distributed_kalman"] = dkf_test_obj.run_n_iterations(
+                data=spsa_input["data"]
+            )
+
+        all_results[run_id] = results
+        all_simulations[run_id] = sim
 
     selected_run: Optional[int] = request.GET.get("run")
     selected_sensor: Optional[str] = request.GET.get("sensor")
@@ -252,19 +148,18 @@ def results_view(request: HttpRequest) -> HttpResponse:
     aggregated_plots: Dict[str, str] = {}
 
     if num_runs == 1:
-        if selected_run in all_simulations and selected_run in all_results:
-            plots_data = generate_plots(
-                all_simulations[selected_run],
-                all_results[selected_run],
-                all_initial_estimates[selected_run],
-                selected_run,
-                num_runs,
-            )
+        plots_data = generate_plots(
+            all_simulations[0],
+            all_results[0],
+            all_initial_estimates[0],
+            selected_run,
+            num_runs,
+        )
     else:
         aggregated_plots = generate_aggregated_plots(
             all_simulations, all_results, all_initial_estimates, num_runs
         )
-        if selected_run < num_runs and selected_run in all_simulations and selected_run in all_results:
+        if selected_run < num_runs:
             plots_data = generate_plots(
                 all_simulations[selected_run],
                 all_results[selected_run],
@@ -295,20 +190,20 @@ def results_view(request: HttpRequest) -> HttpResponse:
         target_int: Optional[int] = (
             int(selected_target) if selected_target and selected_target != "" else None
         )
-        if selected_run in all_simulations and selected_run in all_results:
-            individual_plots: Dict[str, str] = generate_individual_plots(
-                all_simulations[selected_run],
-                all_results[selected_run],
-                all_initial_estimates[selected_run],
-                sensor_int,
-                target_int,
-                selected_run,
-            )
-            context["individual_plots"] = individual_plots
-            context["selected_sensor"] = sensor_int
-            context["selected_target"] = target_int
+        individual_plots: Dict[str, str] = generate_individual_plots(
+            all_simulations[selected_run],
+            all_results[selected_run],
+            all_initial_estimates[selected_run],
+            sensor_int,
+            target_int,
+            selected_run,
+        )
+        context["individual_plots"] = individual_plots
+        context["selected_sensor"] = sensor_int
+        context["selected_target"] = target_int
 
     return render(request, "simulations/results.html", context)
+
 
 def generate_plots(
     sim: Simulation,
@@ -552,6 +447,7 @@ def generate_plots(
 
     return plots
 
+
 def generate_aggregated_plots(
     all_simulations: Dict[int, Simulation],
     all_results: Dict[int, Dict[str, Any]],
@@ -649,6 +545,7 @@ def generate_aggregated_plots(
     plt.close()
 
     return plots
+
 
 def generate_individual_plots(
     sim: Simulation,
