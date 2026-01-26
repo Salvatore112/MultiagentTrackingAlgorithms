@@ -38,6 +38,11 @@
             padding: 15px;
             margin-top: 10px;
         }
+        .algorithm-control {
+            border-left: 3px solid #0d6efd;
+            padding-left: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -51,19 +56,37 @@
                     
                     <div class="row">
                         <div class="col-md-5">
-                            <h5 class="mb-3">Algorithms to Analyze</h5>
+                            <h5 class="mb-3">Algorithms Configuration</h5>
                             <div class="d-flex flex-column gap-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
-                                    <label class="form-check-label" for="original_spsa">Original SPSA</label>
+                                <div class="algorithm-control">
+                                    <div class="form-check">
+                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
+                                        <label class="form-check-label" for="original_spsa">Original SPSA</label>
+                                    </div>
+                                    <div class="form-check ms-3">
+                                        <input class="form-check-input lline-checkbox" type="checkbox" id="original_spsa_lline" name="original_spsa_lline">
+                                        <label class="form-check-label small" for="original_spsa_lline">Show L-line</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
-                                    <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
+                                <div class="algorithm-control">
+                                    <div class="form-check">
+                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
+                                        <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
+                                    </div>
+                                    <div class="form-check ms-3">
+                                        <input class="form-check-input lline-checkbox" type="checkbox" id="accelerated_spsa_lline" name="accelerated_spsa_lline">
+                                        <label class="form-check-label small" for="accelerated_spsa_lline">Show L-line</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="distributed_kalman" name="algorithms" value="distributed_kalman">
-                                    <label class="form-check-label" for="distributed_kalman">Distributed Kalman Filter</label>
+                                <div class="algorithm-control">
+                                    <div class="form-check">
+                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="distributed_kalman" name="algorithms" value="distributed_kalman">
+                                        <label class="form-check-label" for="distributed_kalman">Distributed Kalman Filter</label>
+                                    </div>
+                                    <div class="form-check ms-3">
+                                        <input class="form-check-input lline-checkbox" type="checkbox" id="distributed_kalman_lline" name="distributed_kalman_lline">
+                                        <label class="form-check-label small" for="distributed_kalman_lline">Show L-line</label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -145,8 +168,28 @@
                 noiseHigh.disabled = !enabled;
             }
             
+            function toggleLLineCheckboxes() {
+                const algorithmCheckboxes = document.querySelectorAll('.algorithm-checkbox');
+                algorithmCheckboxes.forEach(checkbox => {
+                    const llineCheckbox = document.getElementById(`${checkbox.id}_lline`);
+                    if (llineCheckbox) {
+                        llineCheckbox.disabled = !checkbox.checked;
+                        if (!checkbox.checked) {
+                            llineCheckbox.checked = false;
+                        }
+                    }
+                });
+            }
+            
             noiseToggle.addEventListener('change', updateNoiseFields);
+            
+            const algorithmCheckboxes = document.querySelectorAll('.algorithm-checkbox');
+            algorithmCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', toggleLLineCheckboxes);
+            });
+            
             updateNoiseFields();
+            toggleLLineCheckboxes();
         });
     </script>
 </body>

@@ -58,6 +58,11 @@
                             </div>
                         </div>
                         <p><strong>Algorithms:</strong> {{ simulation_params.algorithms|join:", " }}</p>
+                        <p><strong>L-line Display:</strong> 
+                            {% for algo, show in lline_config.items %}
+                                {{ algo }}: {% if show %}ON{% else %}OFF{% endif %}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </p>
                     </div>
                 </div>
 

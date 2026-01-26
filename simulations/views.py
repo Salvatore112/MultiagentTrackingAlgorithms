@@ -27,6 +27,14 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         noise_low: float = float(request.POST.get("noise_low", -0.1))
         noise_high: float = float(request.POST.get("noise_high", 0.1))
 
+        lline_config: Dict[str, bool] = {}
+        if "original_spsa" in algorithms:
+            lline_config["original_spsa"] = request.POST.get("original_spsa_lline") == "on"
+        if "accelerated_spsa" in algorithms:
+            lline_config["accelerated_spsa"] = request.POST.get("accelerated_spsa_lline") == "on"
+        if "distributed_kalman" in algorithms:
+            lline_config["distributed_kalman"] = request.POST.get("distributed_kalman_lline") == "on"
+
         simulation_params = {
             "duration": duration,
             "num_sensors": num_sensors,
@@ -37,6 +45,7 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             "noise_low": noise_low,
             "noise_high": noise_high,
             "num_runs": num_runs,
+            "lline_config": lline_config,
         }
 
         request.session["simulation_params"] = simulation_params
@@ -61,6 +70,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
     noise_low: float = params.get("noise_low", -0.1)
     noise_high: float = params.get("noise_high", 0.1)
     num_runs: int = params.get("num_runs", 1)
+    lline_config: Dict[str, bool] = params.get("lline_config", {})
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
@@ -154,10 +164,11 @@ def results_view(request: HttpRequest) -> HttpResponse:
             all_initial_estimates[0],
             selected_run,
             num_runs,
+            lline_config,
         )
     else:
         aggregated_plots = generate_aggregated_plots(
-            all_simulations, all_results, all_initial_estimates, num_runs
+            all_simulations, all_results, all_initial_estimates, num_runs, lline_config
         )
         if selected_run < num_runs:
             plots_data = generate_plots(
@@ -166,6 +177,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
                 all_initial_estimates[selected_run],
                 selected_run,
                 num_runs,
+                lline_config,
             )
 
     context: Dict[str, Any] = {
@@ -179,6 +191,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
         "num_runs": num_runs,
         "selected_run": selected_run,
         "run_range": range(num_runs),
+        "lline_config": lline_config,
     }
 
     if (selected_sensor is not None and selected_sensor != "") or (
@@ -197,6 +210,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
             sensor_int,
             target_int,
             selected_run,
+            lline_config,
         )
         context["individual_plots"] = individual_plots
         context["selected_sensor"] = sensor_int
@@ -211,6 +225,7 @@ def generate_plots(
     init_coords: Dict[int, Dict[int, np.ndarray]],
     run_id: int,
     num_runs: int,
+    lline_config: Dict[str, bool],
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -453,6 +468,7 @@ def generate_aggregated_plots(
     all_results: Dict[int, Dict[str, Any]],
     all_initial_estimates: Dict[int, Dict[int, Dict[int, np.ndarray]]],
     num_runs: int,
+    lline_config: Dict[str, bool],
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -530,6 +546,12 @@ def generate_aggregated_plots(
             color=colors[idx],
             alpha=0.2,
         )
+        
+        if lline_config.get(algorithm_name, False):
+            final_mean_error = mean_errors[-1]
+            plt.axhline(y=final_mean_error, color=colors[idx], linestyle=':', alpha=0.7, linewidth=2)
+            plt.text(iterations[-1], final_mean_error * 1.05, f'L={final_mean_error:.3f}', 
+                    color=colors[idx], fontsize=11, ha='right', fontweight='bold')
 
     plt.xlabel("Iteration (including initial)")
     plt.ylabel("Aggregated Error (Mean ± Std)")
@@ -554,7 +576,11 @@ def generate_individual_plots(
     sensor_id: Optional[int] = None,
     target_id: Optional[int] = None,
     run_id: int = 0,
+    lline_config: Dict[str, bool] = None,
 ) -> Dict[str, str]:
+    if lline_config is None:
+        lline_config = {}
+        
     plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
@@ -909,6 +935,12 @@ def generate_individual_plots(
                         label=f"Sensor {sensor_id} ({algorithm_name})",
                         linewidth=2,
                     )
+                    
+                    if lline_config.get(algorithm_name, False):
+                        final_error = errors[-1]
+                        plt.axhline(y=final_error, color='gray', linestyle=':', alpha=0.7, linewidth=2)
+                        plt.text(len(errors)-1, final_error * 1.05, f'L={final_error:.3f}', 
+                                color='gray', fontsize=10, ha='right', fontweight='bold')
             else:
                 colors_sensor: np.ndarray = plt.cm.tab10(
                     np.linspace(0, 1, len(sim.sensors))
@@ -943,6 +975,12 @@ def generate_individual_plots(
                             label=f"Sensor {sensor_idx} ({algorithm_name})",
                             linewidth=2,
                         )
+                        
+                        if lline_config.get(algorithm_name, False):
+                            final_error = errors[-1]
+                            plt.axhline(y=final_error, color=colors_sensor[sensor_idx], linestyle=':', alpha=0.7, linewidth=2)
+                            plt.text(len(errors)-1, final_error * 1.05, f'L={final_error:.3f}', 
+                                    color=colors_sensor[sensor_idx], fontsize=10, ha='right', fontweight='bold')
         else:
             if sensor_id is not None:
                 colors_target: np.ndarray = plt.cm.tab10(
@@ -978,6 +1016,12 @@ def generate_individual_plots(
                             label=f"Target {target_idx} ({algorithm_name})",
                             linewidth=2,
                         )
+                        
+                        if lline_config.get(algorithm_name, False):
+                            final_error = errors[-1]
+                            plt.axhline(y=final_error, color=colors_target[target_idx], linestyle=':', alpha=0.7, linewidth=2)
+                            plt.text(len(errors)-1, final_error * 1.05, f'L={final_error:.3f}', 
+                                    color=colors_target[target_idx], fontsize=10, ha='right', fontweight='bold')
 
     title_suffix = ""
     if sensor_id is not None and target_id is not None:
