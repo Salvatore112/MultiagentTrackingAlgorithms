@@ -1,7 +1,8 @@
-# System for analysis of multi-agent algorithms for objects tracking
-[![CI: Linter](https://github.com/Salvatore112/MultiagentTrackingAlgorithms/actions/workflows/lint.yml/badge.svg)](https://github.com/Salvatore112/BaseConfigGen/actions/workflows/ci.yml)
-[![CI: Tests](https://github.com/Salvatore112/MultiagentTrackingAlgorithms/actions/workflows/test.yml/badge.svg)](https://github.com/Salvatore112/BaseConfigGen/actions/workflows/ci.yml)
+![CI: Linter](https://github.com/muffin003/Stochastic-Optimization-Benchmark/actions/workflows/lint.yml/badge.svg)
+![CI: Tests](https://github.com/muffin003/Stochastic-Optimization-Benchmark/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+# System for analysis of multi-agent algorithms for objects tracking
 
 This system is designed to analyze and compare different multi-agent tracking algorithms
 
