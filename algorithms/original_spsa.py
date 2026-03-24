@@ -1,11 +1,11 @@
 import numpy as np
-
 from random import random, sample
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Optional, Any
+from .tracking_algorithm import TrackingAlgorithm
 
 
-class Original_SPSA:
+class Original_SPSA(TrackingAlgorithm):
     def __init__(
         self,
         sensors_positions: Optional[Dict[int, np.ndarray]] = None,
@@ -69,7 +69,7 @@ class Original_SPSA:
                 for j in range(self.number_of_sensors):
                     if i != j:
                         self.weight[i, j] = -1.0 / (self.number_of_sensors - 1)
-        
+
         weight = self.weight
 
         errors: Dict = {}

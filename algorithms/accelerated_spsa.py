@@ -2,8 +2,10 @@ import numpy as np
 from random import random, sample
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Optional, Any
+from .tracking_algorithm import TrackingAlgorithm
 
-class Accelerated_SPSA:
+
+class Accelerated_SPSA(TrackingAlgorithm):
     def __init__(
         self,
         sensors_positions: Optional[Dict[int, np.ndarray]] = None,
@@ -68,7 +70,7 @@ class Accelerated_SPSA:
                 for j in range(self.number_of_sensors):
                     if i != j:
                         self.weight[i, j] = -1.0 / (self.number_of_sensors - 1)
-        
+
         weight = self.weight
 
         errors: Dict = {}
@@ -123,8 +125,10 @@ class Accelerated_SPSA:
 
                 v_new = current_alpha * spsa + current_gamma * sum(theta_diff)
                 theta_new[l][i] = y_hat[l][i] - v_new
-                
-                y_hat[l][i] = theta_new[l][i] + ((1 - self.momentum) / (1 + self.momentum)) * (theta_new[l][i] - theta_hat[l][i])
+
+                y_hat[l][i] = theta_new[l][i] + (
+                    (1 - self.momentum) / (1 + self.momentum)
+                ) * (theta_new[l][i] - theta_hat[l][i])
 
                 err += self._compute_error(
                     theta_new[l][i], self.true_targets_position[l]
