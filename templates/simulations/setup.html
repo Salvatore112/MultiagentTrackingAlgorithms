@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,17 +11,21 @@
             background-color: #f5f5f5;
             padding: 20px 0;
         }
+
         .container {
             max-width: 900px;
         }
+
         .card {
             border: none;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
         }
+
         .divider {
             border-left: 2px solid #dee2e6;
             height: 100%;
         }
+
         @media (max-width: 768px) {
             .divider {
                 border-left: none;
@@ -29,15 +34,18 @@
                 padding-top: 20px;
             }
         }
+
         .form-label {
             font-weight: 500;
         }
+
         .noise-section {
             background-color: #f8f9fa;
             border-radius: 5px;
             padding: 15px;
             margin-top: 10px;
         }
+
         .algorithm-control {
             border-left: 3px solid #0d6efd;
             padding-left: 10px;
@@ -45,6 +53,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="card">
@@ -53,76 +62,67 @@
 
                 <form method="post">
                     {% csrf_token %}
-                    
+
                     <div class="row">
                         <div class="col-md-5">
                             <h5 class="mb-3">Algorithms Configuration</h5>
                             <div class="d-flex flex-column gap-2">
-                                <div class="algorithm-control">
-                                    <div class="form-check">
-                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="original_spsa" name="algorithms" value="original_spsa" checked>
-                                        <label class="form-check-label" for="original_spsa">Original SPSA</label>
-                                    </div>
-                                    <div class="form-check ms-3">
-                                        <input class="form-check-input lline-checkbox" type="checkbox" id="original_spsa_lline" name="original_spsa_lline">
-                                        <label class="form-check-label small" for="original_spsa_lline">Show L-line</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input algorithm-checkbox" type="checkbox"
+                                        id="original_spsa" name="algorithms" value="original_spsa" checked>
+                                    <label class="form-check-label" for="original_spsa">Original SPSA</label>
                                 </div>
-                                <div class="algorithm-control">
-                                    <div class="form-check">
-                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
-                                        <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
-                                    </div>
-                                    <div class="form-check ms-3">
-                                        <input class="form-check-input lline-checkbox" type="checkbox" id="accelerated_spsa_lline" name="accelerated_spsa_lline">
-                                        <label class="form-check-label small" for="accelerated_spsa_lline">Show L-line</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input algorithm-checkbox" type="checkbox"
+                                        id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
+                                    <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
                                 </div>
-                                <div class="algorithm-control">
-                                    <div class="form-check">
-                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="distributed_kalman" name="algorithms" value="distributed_kalman">
-                                        <label class="form-check-label" for="distributed_kalman">Distributed Kalman Filter</label>
-                                    </div>
-                                    <div class="form-check ms-3">
-                                        <input class="form-check-input lline-checkbox" type="checkbox" id="distributed_kalman_lline" name="distributed_kalman_lline">
-                                        <label class="form-check-label small" for="distributed_kalman_lline">Show L-line</label>
-                                    </div>
+                                <div class="form-check">
+                                    <input class="form-check-input algorithm-checkbox" type="checkbox"
+                                        id="distributed_kalman" name="algorithms" value="distributed_kalman">
+                                    <label class="form-check-label" for="distributed_kalman">Distributed Kalman
+                                        Filter</label>
                                 </div>
                             </div>
 
                             <div class="noise-section mt-4">
                                 <h6 class="mb-3">Noise Configuration</h6>
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="noise_enabled" name="noise_enabled">
+                                    <input class="form-check-input" type="checkbox" id="noise_enabled"
+                                        name="noise_enabled">
                                     <label class="form-check-label" for="noise_enabled">Enable Distance Noise</label>
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-6">
                                         <label for="noise_low" class="form-label small">Noise Lower Bound</label>
-                                        <input type="number" class="form-control" id="noise_low" name="noise_low" value="-0.1" step="0.01" disabled>
+                                        <input type="number" class="form-control" id="noise_low" name="noise_low"
+                                            value="-0.1" step="0.01" disabled>
                                     </div>
                                     <div class="col-6">
                                         <label for="noise_high" class="form-label small">Noise Upper Bound</label>
-                                        <input type="number" class="form-control" id="noise_high" name="noise_high" value="0.1" step="0.01" disabled>
+                                        <input type="number" class="form-control" id="noise_high" name="noise_high"
+                                            value="0.1" step="0.01" disabled>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-1 d-flex justify-content-center">
                             <div class="divider"></div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <h5 class="mb-3">Simulation Configuration</h5>
                             <div class="mb-3">
                                 <label for="duration" class="form-label">Simulation Duration (seconds)</label>
-                                <input type="number" class="form-control" id="duration" name="duration" value="50" min="1" required>
+                                <input type="number" class="form-control" id="duration" name="duration" value="50"
+                                    min="1" required>
                             </div>
 
                             <div class="mb-3">
                                 <label for="num_sensors" class="form-label">Number of Sensors</label>
-                                <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3" min="1" required>
+                                <input type="number" class="form-control" id="num_sensors" name="num_sensors" value="3"
+                                    min="1" required>
                             </div>
 
                             <div class="mb-3">
@@ -130,19 +130,24 @@
                                 <div class="row g-3 align-items-end">
                                     <div class="col-6">
                                         <label for="num_linear_targets" class="form-label small">Linear Targets</label>
-                                        <input type="number" class="form-control" id="num_linear_targets" name="num_linear_targets" value="2" min="0" required>
+                                        <input type="number" class="form-control" id="num_linear_targets"
+                                            name="num_linear_targets" value="2" min="0" required>
                                     </div>
                                     <div class="col-6">
-                                        <label for="num_random_targets" class="form-label small">Random Walk Targets</label>
-                                        <input type="number" class="form-control" id="num_random_targets" name="num_random_targets" value="2" min="0" required>
+                                        <label for="num_random_targets" class="form-label small">Random Walk
+                                            Targets</label>
+                                        <input type="number" class="form-control" id="num_random_targets"
+                                            name="num_random_targets" value="2" min="0" required>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <label for="num_runs" class="form-label">Number of Simulation Runs</label>
-                                <input type="number" class="form-control" id="num_runs" name="num_runs" value="1" min="1" required>
-                                <div class="form-text">The simulation will run multiple times with different random seeds.</div>
+                                <input type="number" class="form-control" id="num_runs" name="num_runs" value="1"
+                                    min="1" required>
+                                <div class="form-text">The simulation will run multiple times with different random
+                                    seeds.</div>
                             </div>
                         </div>
                     </div>
@@ -157,40 +162,21 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const noiseToggle = document.getElementById('noise_enabled');
             const noiseLow = document.getElementById('noise_low');
             const noiseHigh = document.getElementById('noise_high');
-            
+
             function updateNoiseFields() {
                 const enabled = noiseToggle.checked;
                 noiseLow.disabled = !enabled;
                 noiseHigh.disabled = !enabled;
             }
-            
-            function toggleLLineCheckboxes() {
-                const algorithmCheckboxes = document.querySelectorAll('.algorithm-checkbox');
-                algorithmCheckboxes.forEach(checkbox => {
-                    const llineCheckbox = document.getElementById(`${checkbox.id}_lline`);
-                    if (llineCheckbox) {
-                        llineCheckbox.disabled = !checkbox.checked;
-                        if (!checkbox.checked) {
-                            llineCheckbox.checked = false;
-                        }
-                    }
-                });
-            }
-            
+
             noiseToggle.addEventListener('change', updateNoiseFields);
-            
-            const algorithmCheckboxes = document.querySelectorAll('.algorithm-checkbox');
-            algorithmCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', toggleLLineCheckboxes);
-            });
-            
             updateNoiseFields();
-            toggleLLineCheckboxes();
         });
     </script>
 </body>
+
 </html>
