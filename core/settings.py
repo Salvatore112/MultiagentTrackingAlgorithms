@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import secrets
+import os
 
 from pathlib import Path
 from typing import List, Dict, Any
@@ -59,6 +60,7 @@ INSTALLED_APPS: List[str] = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "simulations",
+    "accounts",
 ]
 
 MIDDLEWARE: List[str] = [
@@ -138,7 +140,20 @@ USE_TZ: bool = True
 
 STATIC_URL: str = "static/"
 STATICFILES_DIRS: List[Path] = [BASE_DIR / "static"]
+
+# Media files (User uploads)
+MEDIA_URL: str = "/media/"
+MEDIA_ROOT: Path = BASE_DIR / "media"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD: str = "django.db.models.BigAutoField"
+
+# Custom user model
+AUTH_USER_MODEL: str = "accounts.User"
+
+# Login URL
+LOGIN_URL: str = "accounts:login"
+LOGIN_REDIRECT_URL: str = "simulations:setup"
+LOGOUT_REDIRECT_URL: str = "simulations:setup"

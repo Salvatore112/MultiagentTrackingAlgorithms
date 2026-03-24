@@ -43,13 +43,35 @@
             padding-left: 10px;
             margin-bottom: 10px;
         }
+        .custom-algorithm-item {
+            border-left: 3px solid #198754;
+        }
+        .guest-tip {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <div class="card-body p-4">
-                <h1 class="card-title text-center mb-4">Multi-Agent Tracking Simulation Setup</h1>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="card-title mb-0">Multi-Agent Tracking Simulation Setup</h1>
+                    <div>
+                        {% if user.is_authenticated %}
+                            <span class="badge bg-success me-2">Logged in as {{ user.username }}</span>
+                            <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-outline-primary">My Profile</a>
+                            <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger">Logout</a>
+                        {% else %}
+                            <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-primary">Login</a>
+                            <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-outline-success">Register</a>
+                        {% endif %}
+                    </div>
+                </div>
 
                 <form method="post">
                     {% csrf_token %}
@@ -66,7 +88,24 @@
                                     <input class="form-check-input algorithm-checkbox" type="checkbox" id="accelerated_spsa" name="algorithms" value="accelerated_spsa">
                                     <label class="form-check-label" for="accelerated_spsa">Accelerated SPSA</label>
                                 </div>
+                                
+                                {% if custom_algorithms %}
+                                    <hr>
+                                    <h6 class="mt-2">Your Custom Algorithms</h6>
+                                    {% for algo in custom_algorithms %}
+                                    <div class="form-check custom-algorithm-item">
+                                        <input class="form-check-input algorithm-checkbox" type="checkbox" id="{{ algo }}" name="algorithms" value="{{ algo }}">
+                                        <label class="form-check-label" for="{{ algo }}">{{ algo }}</label>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
                             </div>
+                            
+                            {% if not user.is_authenticated %}
+                            <div class="guest-tip mt-3">
+                                <strong>💡 Tip:</strong> <a href="{% url 'accounts:register' %}">Create a free account</a> to upload and test your own algorithms! Your algorithms will have full access to the tracking API and can inherit from TrackingAlgorithm.
+                            </div>
+                            {% endif %}
 
                             <div class="noise-section mt-4">
                                 <h6 class="mb-3">Noise Configuration</h6>

@@ -3,15 +3,49 @@ import matplotlib
 import matplotlib.pyplot as plt
 import io
 import base64
-
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
 from django.urls import reverse
+from django.contrib import messages
 from typing import Dict, List, Any, Optional, Tuple
 from .simulation import Simulation
 from algorithms.original_spsa import Original_SPSA
+from algorithms.accelerated_spsa import Accelerated_SPSA
 
 matplotlib.use("Agg")
+
+
+def get_algorithm_instance(algorithm_name, algorithm_config, user=None):
+    base_algorithms = {
+        "original_spsa": Original_SPSA,
+        "accelerated_spsa": Accelerated_SPSA,
+    }
+    
+    if algorithm_name in base_algorithms:
+        return base_algorithms[algorithm_name](**algorithm_config)
+    
+    if user and user.is_authenticated:
+        try:
+            from accounts.models import CustomAlgorithm
+            
+            custom_algo = CustomAlgorithm.objects.filter(
+                user=user, 
+                name=algorithm_name, 
+                is_active=True
+            ).first()
+            
+            if custom_algo:
+                algorithm_class = custom_algo.get_algorithm_class()
+                if algorithm_class:
+                    return algorithm_class(**algorithm_config)
+                else:
+                    print(f"Could not find algorithm class in {algorithm_name}")
+                    return None
+        except Exception as e:
+            print(f"Error loading custom algorithm {algorithm_name}: {e}")
+            return None
+    
+    return None
 
 
 def setup_view(request: HttpRequest) -> HttpResponse:
@@ -27,6 +61,13 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         noise_low: float = float(request.POST.get("noise_low", -0.1))
         noise_high: float = float(request.POST.get("noise_high", 0.1))
 
+        lline_config: Dict[str, bool] = {}
+        for algo in algorithms:
+            if algo in ["original_spsa", "accelerated_spsa"]:
+                lline_config[algo] = request.POST.get(f"{algo}_lline") == "on"
+            else:
+                lline_config[algo] = request.POST.get(f"{algo}_lline") == "on"
+
         simulation_params = {
             "duration": duration,
             "num_sensors": num_sensors,
@@ -37,20 +78,32 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             "noise_low": noise_low,
             "noise_high": noise_high,
             "num_runs": num_runs,
+            "lline_config": lline_config,
         }
 
         request.session["simulation_params"] = simulation_params
 
-        return HttpResponseRedirect(reverse("results"))
+        return HttpResponseRedirect(reverse("simulations:results"))
 
-    return render(request, "simulations/setup.html")
+    custom_algorithms = []
+    if request.user.is_authenticated:
+        try:
+            from accounts.models import CustomAlgorithm
+            custom_algorithms = list(request.user.algorithms.filter(is_active=True).values_list('name', flat=True))
+        except:
+            pass
+    
+    return render(request, "simulations/setup.html", {
+        "custom_algorithms": custom_algorithms,
+        "user": request.user,
+    })
 
 
 def results_view(request: HttpRequest) -> HttpResponse:
     params: Dict[str, Any] = request.session.get("simulation_params", {})
 
     if not params:
-        return HttpResponseRedirect(reverse("setup"))
+        return HttpResponseRedirect(reverse("simulations:setup"))
 
     duration: float = params.get("duration", 50)
     num_sensors: int = params.get("num_sensors", 3)
@@ -61,6 +114,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
     noise_low: float = params.get("noise_low", -0.1)
     noise_high: float = params.get("noise_high", 0.1)
     num_runs: int = params.get("num_runs", 1)
+    lline_config: Dict[str, bool] = params.get("lline_config", {})
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
@@ -93,29 +147,30 @@ def results_view(request: HttpRequest) -> HttpResponse:
         all_initial_estimates[run_id] = spsa_input["init_coords"]
 
         results: Dict[str, Any] = {}
-        if "original_spsa" in algorithms:
-            test_obj: Original_SPSA = Original_SPSA(
-                sensors_positions=spsa_input["sensors_positions"],
-                true_targets_position=spsa_input["data"][0][0],
-                distances=spsa_input["data"][0][1],
-                init_coords=spsa_input["init_coords"],
+        
+        for algorithm_name in algorithms:
+            algorithm_config = {
+                "sensors_positions": spsa_input["sensors_positions"],
+                "true_targets_position": spsa_input["data"][0][0],
+                "distances": spsa_input["data"][0][1],
+                "init_coords": spsa_input["init_coords"],
+            }
+            
+            algorithm_instance = get_algorithm_instance(
+                algorithm_name, 
+                algorithm_config, 
+                request.user if request.user.is_authenticated else None
             )
-            results["original_spsa"] = test_obj.run_n_iterations(
-                data=spsa_input["data"]
-            )
-
-        if "accelerated_spsa" in algorithms:
-            from algorithms.accelerated_spsa import Accelerated_SPSA
-
-            acc_test_obj: Accelerated_SPSA = Accelerated_SPSA(
-                sensors_positions=spsa_input["sensors_positions"],
-                true_targets_position=spsa_input["data"][0][0],
-                distances=spsa_input["data"][0][1],
-                init_coords=spsa_input["init_coords"],
-            )
-            results["accelerated_spsa"] = acc_test_obj.run_n_iterations(
-                data=spsa_input["data"]
-            )
+            
+            if algorithm_instance:
+                try:
+                    results[algorithm_name] = algorithm_instance.run_n_iterations(
+                        data=spsa_input["data"]
+                    )
+                except Exception as e:
+                    messages.error(request, f"Error running algorithm {algorithm_name}: {e}")
+            else:
+                messages.warning(request, f"Could not load algorithm: {algorithm_name}")
 
         all_results[run_id] = results
         all_simulations[run_id] = sim
@@ -141,10 +196,11 @@ def results_view(request: HttpRequest) -> HttpResponse:
             all_initial_estimates[0],
             selected_run,
             num_runs,
+            lline_config,
         )
     else:
         aggregated_plots = generate_aggregated_plots(
-            all_simulations, all_results, all_initial_estimates, num_runs
+            all_simulations, all_results, all_initial_estimates, num_runs, lline_config
         )
         if selected_run < num_runs:
             plots_data = generate_plots(
@@ -153,6 +209,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
                 all_initial_estimates[selected_run],
                 selected_run,
                 num_runs,
+                lline_config,
             )
 
     context: Dict[str, Any] = {
@@ -166,6 +223,8 @@ def results_view(request: HttpRequest) -> HttpResponse:
         "num_runs": num_runs,
         "selected_run": selected_run,
         "run_range": range(num_runs),
+        "lline_config": lline_config,
+        "user": request.user,
     }
 
     if (selected_sensor is not None and selected_sensor != "") or (
@@ -184,6 +243,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
             sensor_int,
             target_int,
             selected_run,
+            lline_config,
         )
         context["individual_plots"] = individual_plots
         context["selected_sensor"] = sensor_int
@@ -198,6 +258,7 @@ def generate_plots(
     init_coords: Dict[int, Dict[int, np.ndarray]],
     run_id: int,
     num_runs: int,
+    lline_config: Dict[str, bool],
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -248,6 +309,9 @@ def generate_plots(
         "accelerated_spsa": ":",
     }
     for algorithm_name, algorithm_results in results.items():
+        if algorithm_name not in line_styles:
+            line_styles[algorithm_name] = "--"
+        
         for target_id in algorithm_results[0][0].keys():
             target_estimates: List[np.ndarray] = []
 
@@ -381,6 +445,9 @@ def generate_plots(
         "accelerated_spsa": ":",
     }
     for algorithm_name, algorithm_results in results.items():
+        if algorithm_name not in line_styles:
+            line_styles[algorithm_name] = "--"
+            
         errors_over_time: Dict[int, List[float]] = {
             target_id: [] for target_id in algorithm_results[0][0].keys()
         }
@@ -438,6 +505,7 @@ def generate_aggregated_plots(
     all_results: Dict[int, Dict[str, Any]],
     all_initial_estimates: Dict[int, Dict[int, Dict[int, np.ndarray]]],
     num_runs: int,
+    lline_config: Dict[str, bool],
 ) -> Dict[str, str]:
     plots: Dict[str, str] = {}
 
@@ -516,6 +584,25 @@ def generate_aggregated_plots(
             alpha=0.2,
         )
 
+        if lline_config.get(algorithm_name, False):
+            final_mean_error = mean_errors[-1]
+            plt.axhline(
+                y=final_mean_error,
+                color=colors[idx],
+                linestyle=":",
+                alpha=0.7,
+                linewidth=2,
+            )
+            plt.text(
+                iterations[-1],
+                final_mean_error * 1.05,
+                f"L={final_mean_error:.3f}",
+                color=colors[idx],
+                fontsize=11,
+                ha="right",
+                fontweight="bold",
+            )
+
     plt.xlabel("Iteration (including initial)")
     plt.ylabel("Aggregated Error (Mean ± Std)")
     plt.title(f"Aggregated Error Convergence ({num_runs} Runs)")
@@ -539,7 +626,11 @@ def generate_individual_plots(
     sensor_id: Optional[int] = None,
     target_id: Optional[int] = None,
     run_id: int = 0,
+    lline_config: Dict[str, bool] = None,
 ) -> Dict[str, str]:
+    if lline_config is None:
+        lline_config = {}
+
     plots: Dict[str, str] = {}
 
     plt.figure(figsize=(12, 8))
@@ -591,6 +682,9 @@ def generate_individual_plots(
             "accelerated_spsa": ":",
         }
         for algorithm_name, algorithm_results in results.items():
+            if algorithm_name not in line_styles:
+                line_styles[algorithm_name] = "--"
+                
             if sensor_id is not None:
                 sensor_estimates: List[np.ndarray] = []
 
@@ -767,6 +861,9 @@ def generate_individual_plots(
             "accelerated_spsa": ":",
         }
         for algorithm_name, algorithm_results in results.items():
+            if algorithm_name not in line_styles:
+                line_styles[algorithm_name] = "--"
+                
             if sensor_id is not None:
                 for target_idx in algorithm_results[0][0].keys():
                     sensor_estimates: List[np.ndarray] = []
@@ -863,6 +960,9 @@ def generate_individual_plots(
         "accelerated_spsa": ":",
     }
     for algorithm_name, algorithm_results in results.items():
+        if algorithm_name not in line_styles:
+            line_styles[algorithm_name] = "--"
+            
         if target_id is not None:
             if sensor_id is not None:
                 errors: List[float] = []
@@ -891,6 +991,25 @@ def generate_individual_plots(
                         label=f"Sensor {sensor_id} ({algorithm_name})",
                         linewidth=2,
                     )
+
+                    if lline_config.get(algorithm_name, False):
+                        final_error = errors[-1]
+                        plt.axhline(
+                            y=final_error,
+                            color="gray",
+                            linestyle=":",
+                            alpha=0.7,
+                            linewidth=2,
+                        )
+                        plt.text(
+                            len(errors) - 1,
+                            final_error * 1.05,
+                            f"L={final_error:.3f}",
+                            color="gray",
+                            fontsize=10,
+                            ha="right",
+                            fontweight="bold",
+                        )
             else:
                 colors_sensor: np.ndarray = plt.cm.tab10(
                     np.linspace(0, 1, len(sim.sensors))
@@ -925,6 +1044,25 @@ def generate_individual_plots(
                             label=f"Sensor {sensor_idx} ({algorithm_name})",
                             linewidth=2,
                         )
+
+                        if lline_config.get(algorithm_name, False):
+                            final_error = errors[-1]
+                            plt.axhline(
+                                y=final_error,
+                                color=colors_sensor[sensor_idx],
+                                linestyle=":",
+                                alpha=0.7,
+                                linewidth=2,
+                            )
+                            plt.text(
+                                len(errors) - 1,
+                                final_error * 1.05,
+                                f"L={final_error:.3f}",
+                                color=colors_sensor[sensor_idx],
+                                fontsize=10,
+                                ha="right",
+                                fontweight="bold",
+                            )
         else:
             if sensor_id is not None:
                 colors_target: np.ndarray = plt.cm.tab10(
@@ -960,6 +1098,25 @@ def generate_individual_plots(
                             label=f"Target {target_idx} ({algorithm_name})",
                             linewidth=2,
                         )
+
+                        if lline_config.get(algorithm_name, False):
+                            final_error = errors[-1]
+                            plt.axhline(
+                                y=final_error,
+                                color=colors_target[target_idx],
+                                linestyle=":",
+                                alpha=0.7,
+                                linewidth=2,
+                            )
+                            plt.text(
+                                len(errors) - 1,
+                                final_error * 1.05,
+                                f"L={final_error:.3f}",
+                                color=colors_target[target_idx],
+                                fontsize=10,
+                                ha="right",
+                                fontweight="bold",
+                            )
 
     title_suffix = ""
     if sensor_id is not None and target_id is not None:
