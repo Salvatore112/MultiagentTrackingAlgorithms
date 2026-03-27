@@ -95,6 +95,53 @@
             margin-bottom: 0.5rem;
             color: #495057;
         }
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-green {
+            background-color: #28a745;
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .btn-green:hover {
+            background-color: #218838;
+            color: white;
+        }
+        .btn-blue {
+            background-color: #0d6efd;
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .btn-blue:hover {
+            background-color: #0b5ed7;
+            color: white;
+        }
+        .btn-red {
+            background-color: #dc3545;
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        .btn-red:hover {
+            background-color: #c82333;
+            color: white;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .user-badge {
+            background-color: #e9ecef;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 <body>
@@ -105,12 +152,16 @@
                     <h1 class="card-title mb-0">Multi-Agent Tracking Simulation Setup</h1>
                     <div>
                         {% if user.is_authenticated %}
-                            <span class="badge bg-success me-2">Logged in as {{ user.username }}</span>
-                            <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-outline-primary">My Profile</a>
-                            <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger">Logout</a>
+                            <div class="user-info">
+                                <span class="user-badge">{{ user.username }}</span>
+                                <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-green">Profile</a>
+                                <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-red">Logout</a>
+                            </div>
                         {% else %}
-                            <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-primary">Login</a>
-                            <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-outline-success">Register</a>
+                            <div class="auth-buttons">
+                                <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-green">Sign in</a>
+                                <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-blue">Create account</a>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -152,7 +203,7 @@
                             
                             {% if not user.is_authenticated %}
                             <div class="info-tip mt-3">
-                                To add an algorithm create an account. Custom algorithms will have access to the necessary API.
+                                <span>📌</span> To add an algorithm create an account. Custom algorithms will have access to the necessary API.
                                 <a href="{% url 'accounts:register' %}">Create account</a>
                             </div>
                             {% endif %}
