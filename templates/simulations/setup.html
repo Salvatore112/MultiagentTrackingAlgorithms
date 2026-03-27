@@ -43,9 +43,6 @@
             padding-left: 10px;
             margin-bottom: 10px;
         }
-        .custom-algorithm-item {
-            border-left: 3px solid #198754;
-        }
         .info-tip {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -99,7 +96,6 @@
             display: flex;
             gap: 0.5rem;
         }
-        /* Unified button styles: outline style for both auth and profile/logout */
         .btn-outline-primary {
             color: #0d6efd;
             border-color: #0d6efd;
@@ -122,12 +118,6 @@
             color: #fff;
             border-color: #dc3545;
         }
-        /* Removing old green/blue specific button classes, keeping for consistency but not used in new design.
-           However, we'll keep the structure but override with outline style. To match exactly,
-           we apply .btn-outline-primary and .btn-outline-danger for all action buttons. */
-        .btn-green, .btn-blue {
-            /* These are replaced by outline classes, but keep for backward if any; we'll not use them */
-        }
         .user-info {
             display: flex;
             align-items: center;
@@ -145,13 +135,11 @@
             display: flex;
             gap: 0.5rem;
         }
-        /* Ensure consistent sizing for all buttons in the auth section */
         .btn-sm {
             font-size: 0.875rem;
             padding: 0.375rem 0.75rem;
             border-radius: 0.375rem;
         }
-        /* Additional style for consistency: any custom button must look similar */
         .btn-outline-primary, .btn-outline-danger {
             font-weight: 500;
         }
@@ -174,7 +162,6 @@
                             </div>
                         {% else %}
                             <div class="auth-buttons">
-                                <!-- Unify design: using same outline style as Profile and Logout buttons -->
                                 <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-primary">Sign in</a>
                                 <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-outline-primary">Create account</a>
                             </div>
@@ -207,7 +194,7 @@
                                     <h5 class="mb-3">User algorithms</h5>
                                     <div class="algorithm-items">
                                         {% for algo in custom_algorithms %}
-                                        <div class="form-check custom-algorithm-item">
+                                        <div class="form-check">
                                             <input class="form-check-input algorithm-checkbox" type="checkbox" id="{{ algo }}" name="algorithms" value="{{ algo }}">
                                             <label class="form-check-label" for="{{ algo }}">{{ algo }}</label>
                                         </div>
