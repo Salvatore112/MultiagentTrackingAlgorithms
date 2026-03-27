@@ -119,16 +119,6 @@
             background-color: #0b5ed7;
             color: white;
         }
-        .btn-red {
-            background-color: #dc3545;
-            border: none;
-            color: white;
-            transition: all 0.2s ease;
-        }
-        .btn-red:hover {
-            background-color: #c82333;
-            color: white;
-        }
         .user-info {
             display: flex;
             align-items: center;
@@ -154,8 +144,8 @@
                         {% if user.is_authenticated %}
                             <div class="user-info">
                                 <span class="user-badge">{{ user.username }}</span>
-                                <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-green">Profile</a>
-                                <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-red">Logout</a>
+                                <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-outline-secondary">Profile</a>
+                                <a href="{% url 'accounts:logout' %}" class="btn btn-sm btn-outline-danger">Logout</a>
                             </div>
                         {% else %}
                             <div class="auth-buttons">
