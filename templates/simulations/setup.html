@@ -46,12 +46,21 @@
         .custom-algorithm-item {
             border-left: 3px solid #198754;
         }
-        .guest-tip {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
+        .info-tip {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
             border-radius: 5px;
             padding: 10px;
             margin-top: 10px;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .info-tip a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        .info-tip a:hover {
+            text-decoration: underline;
         }
         .algorithms-section {
             display: flex;
@@ -142,8 +151,9 @@
                             </div>
                             
                             {% if not user.is_authenticated %}
-                            <div class="guest-tip mt-3">
-                                <strong>💡 Tip:</strong> <a href="{% url 'accounts:register' %}">Create a free account</a> to upload and test your own algorithms! Your algorithms will have full access to the tracking API and can inherit from TrackingAlgorithm.
+                            <div class="info-tip mt-3">
+                                To add an algorithm create an account. Custom algorithms will have access to the necessary API.
+                                <a href="{% url 'accounts:register' %}">Create account</a>
                             </div>
                             {% endif %}
 
