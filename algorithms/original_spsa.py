@@ -105,13 +105,16 @@ class Original_SPSA():
 
                 neighbors_i: List[int] = neighbors.get(i, [])
                 b: np.ndarray = weight[i]
-                theta_diff: List[np.ndarray] = [
-                    abs(b[j]) * (theta_hat[l][i] - theta_hat[l][j]) for j in neighbors_i
-                ]
-
-                theta_new[l][i] = theta_hat[l][i] - (
-                    self.alpha * spsa + self.gamma * sum(theta_diff)
-                )
+                
+                if len(neighbors_i) > 0:
+                    theta_diff: List[np.ndarray] = [
+                        abs(b[j]) * (theta_hat[l][i] - theta_hat[l][j]) for j in neighbors_i
+                    ]
+                    theta_new[l][i] = theta_hat[l][i] - (
+                        self.alpha * spsa + self.gamma * sum(theta_diff)
+                    )
+                else:
+                    theta_new[l][i] = theta_hat[l][i] - self.alpha * spsa
 
                 err += self._compute_error(
                     theta_new[l][i], self.true_targets_position[l]
@@ -138,6 +141,14 @@ class Original_SPSA():
     ) -> float:
         C: np.ndarray = self._C_i(i, neibors)
         D: List[float] = self._D_l_i(l, i, neibors)
+        
+        if C.shape[0] == 0:
+            return float(np.linalg.norm(r_hat_l - self.sensors_positions[i]) ** 2)
+        
+        if C.shape[0] == 1:
+            C_i_inv = 1.0 / C[0, 0] if C[0, 0] != 0 else 1.0
+            diff = r_hat_l - (C_i_inv * D[0])
+            return float(sum(diff * diff))
 
         try:
             C_i_inv: np.ndarray = np.linalg.inv(C)
@@ -148,15 +159,19 @@ class Original_SPSA():
         return float(sum(diff * diff))
 
     def _C_i(self, i: int, neibors: Dict[int, List[int]]) -> np.ndarray:
+        neighbor_list = neibors.get(i, [])
         C_i: List[np.ndarray] = [
             self.sensors_positions.get(j) - self.sensors_positions.get(i)
-            for j in neibors.get(i)
+            for j in neighbor_list
         ]
+        if len(C_i) == 0:
+            return np.array([])
         return 2 * np.array(C_i)
 
     def _D_l_i(self, l: int, i: int, neibors: Dict[int, List[int]]) -> List[float]:
+        neighbor_list = neibors.get(i, [])
         Dli: List[float] = [
-            self._calc_D_l_i_j(self.distances.get(l), i, j) for j in neibors.get(i)
+            self._calc_D_l_i_j(self.distances.get(l), i, j) for j in neighbor_list
         ]
         return Dli
 
@@ -178,7 +193,7 @@ class Original_SPSA():
         return float(pow(sum(vector_1 - vector_2), 2))
 
     def _get_random_neibors(
-        self, weight: np.ndarray, max: int = 2
+        self, weight: np.ndarray, max: int = 1
     ) -> Dict[int, List[int]]:
         neibors_mat: np.ndarray = (weight != 0).astype(int)
         np.fill_diagonal(neibors_mat, 0)
