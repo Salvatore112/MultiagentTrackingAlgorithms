@@ -11,6 +11,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from .simulation import Simulation
 from algorithms.original_spsa import Original_SPSA
 from algorithms.accelerated_spsa import Accelerated_SPSA
+from algorithms.distributed_kalman_filter import Distributed_Kalman_Filter
 
 matplotlib.use("Agg")
 
@@ -19,6 +20,7 @@ def get_algorithm_instance(algorithm_name, algorithm_config, user=None):
     base_algorithms = {
         "original_spsa": Original_SPSA,
         "accelerated_spsa": Accelerated_SPSA,
+        "distributed_kalman_filter": Distributed_Kalman_Filter,
     }
     
     if algorithm_name in base_algorithms:
@@ -66,7 +68,7 @@ def setup_view(request: HttpRequest) -> HttpResponse:
 
         lline_config: Dict[str, bool] = {}
         for algo in algorithms:
-            if algo in ["original_spsa", "accelerated_spsa"]:
+            if algo in ["original_spsa", "accelerated_spsa", "distributed_kalman_filter"]:
                 lline_config[algo] = request.POST.get(f"{algo}_lline") == "on"
             else:
                 lline_config[algo] = request.POST.get(f"{algo}_lline") == "on"
@@ -433,6 +435,7 @@ def generate_plots(
     line_styles = {
         "original_spsa": "-",
         "accelerated_spsa": ":",
+        "distributed_kalman_filter": "--",
     }
     for algorithm_name, algorithm_results in results.items():
         if algorithm_name not in line_styles:
@@ -569,6 +572,7 @@ def generate_plots(
     line_styles = {
         "original_spsa": "-",
         "accelerated_spsa": ":",
+        "distributed_kalman_filter": "--",
     }
     for algorithm_name, algorithm_results in results.items():
         if algorithm_name not in line_styles:
@@ -806,6 +810,7 @@ def generate_individual_plots(
         line_styles = {
             "original_spsa": "-",
             "accelerated_spsa": ":",
+            "distributed_kalman_filter": "--",
         }
         for algorithm_name, algorithm_results in results.items():
             if algorithm_name not in line_styles:
@@ -985,6 +990,7 @@ def generate_individual_plots(
         line_styles = {
             "original_spsa": "-",
             "accelerated_spsa": ":",
+            "distributed_kalman_filter": "--",
         }
         for algorithm_name, algorithm_results in results.items():
             if algorithm_name not in line_styles:
@@ -1084,6 +1090,7 @@ def generate_individual_plots(
     line_styles = {
         "original_spsa": "-",
         "accelerated_spsa": ":",
+        "distributed_kalman_filter": "--",
     }
     for algorithm_name, algorithm_results in results.items():
         if algorithm_name not in line_styles:
