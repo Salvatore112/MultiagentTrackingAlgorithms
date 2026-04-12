@@ -547,6 +547,11 @@ class Simulation:
             high: float = self.noise_config.get("high", 0.1)
             noise: float = random.uniform(low, high)
             return distance + noise
+        elif noise_type == "gaussian":
+            mean: float = self.noise_config.get("mean", 0.0)
+            std: float = self.noise_config.get("std", 0.1)
+            noise: float = random.gauss(mean, std)
+            return distance + noise
         else:
             return distance
 

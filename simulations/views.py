@@ -58,8 +58,11 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         num_runs: int = int(request.POST.get("num_runs", 1))
 
         noise_enabled: bool = request.POST.get("noise_enabled") == "on"
+        noise_type: str = request.POST.get("noise_type", "uniform")
         noise_low: float = float(request.POST.get("noise_low", -0.1))
         noise_high: float = float(request.POST.get("noise_high", 0.1))
+        noise_mean: float = float(request.POST.get("noise_mean", 0.0))
+        noise_std: float = float(request.POST.get("noise_std", 0.1))
 
         lline_config: Dict[str, bool] = {}
         for algo in algorithms:
@@ -75,8 +78,11 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             "num_random_targets": num_random_targets,
             "algorithms": algorithms,
             "noise_enabled": noise_enabled,
+            "noise_type": noise_type,
             "noise_low": noise_low,
             "noise_high": noise_high,
+            "noise_mean": noise_mean,
+            "noise_std": noise_std,
             "num_runs": num_runs,
             "lline_config": lline_config,
         }
@@ -111,14 +117,20 @@ def results_view(request: HttpRequest) -> HttpResponse:
     num_random_targets: int = params.get("num_random_targets", 2)
     algorithms: List[str] = params.get("algorithms", ["original_spsa"])
     noise_enabled: bool = params.get("noise_enabled", False)
+    noise_type: str = params.get("noise_type", "uniform")
     noise_low: float = params.get("noise_low", -0.1)
     noise_high: float = params.get("noise_high", 0.1)
+    noise_mean: float = params.get("noise_mean", 0.0)
+    noise_std: float = params.get("noise_std", 0.1)
     num_runs: int = params.get("num_runs", 1)
     lline_config: Dict[str, bool] = params.get("lline_config", {})
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
-        noise_config = {"type": "uniform", "low": noise_low, "high": noise_high}
+        if noise_type == "uniform":
+            noise_config = {"type": "uniform", "low": noise_low, "high": noise_high}
+        elif noise_type == "gaussian":
+            noise_config = {"type": "gaussian", "mean": noise_mean, "std": noise_std}
 
     all_results: Dict[int, Dict[str, Any]] = {}
     all_simulations: Dict[int, Simulation] = {}

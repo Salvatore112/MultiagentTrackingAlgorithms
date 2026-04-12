@@ -38,6 +38,12 @@
             padding: 15px;
             margin-top: 10px;
         }
+        .noise-type-selector {
+            margin-bottom: 15px;
+        }
+        .uniform-params, .gaussian-params {
+            transition: opacity 0.3s ease;
+        }
         .algorithm-control {
             border-left: 3px solid #0d6efd;
             padding-left: 10px;
@@ -215,16 +221,46 @@
                                 <h6 class="mb-3">Noise Configuration</h6>
                                 <div class="form-check form-switch mb-3">
                                     <input class="form-check-input" type="checkbox" id="noise_enabled" name="noise_enabled">
-                                    <label class="form-check-label" for="noise_enabled">Enable Distance Noise (Uniform distribution) </label>
+                                    <label class="form-check-label" for="noise_enabled">Enable Distance Noise</label>
                                 </div>
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <label for="noise_low" class="form-label small">Noise Lower Bound</label>
-                                        <input type="number" class="form-control" id="noise_low" name="noise_low" value="-0.1" step="0.01" disabled>
+                                
+                                <div id="noiseParams" style="display: none;">
+                                    <div class="noise-type-selector">
+                                        <label class="form-label small">Noise Type</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="noise_type" id="noise_uniform" value="uniform" checked>
+                                            <label class="form-check-label" for="noise_uniform">Uniform Distribution</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="noise_type" id="noise_gaussian" value="gaussian">
+                                            <label class="form-check-label" for="noise_gaussian">Gaussian Distribution</label>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <label for="noise_high" class="form-label small">Noise Upper Bound</label>
-                                        <input type="number" class="form-control" id="noise_high" name="noise_high" value="0.1" step="0.01" disabled>
+                                    
+                                    <div id="uniformParams">
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <label for="noise_low" class="form-label small">Lower Bound</label>
+                                                <input type="number" class="form-control" id="noise_low" name="noise_low" value="-0.1" step="0.01">
+                                            </div>
+                                            <div class="col-6">
+                                                <label for="noise_high" class="form-label small">Upper Bound</label>
+                                                <input type="number" class="form-control" id="noise_high" name="noise_high" value="0.1" step="0.01">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="gaussianParams" style="display: none;">
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <label for="noise_mean" class="form-label small">Mean (μ)</label>
+                                                <input type="number" class="form-control" id="noise_mean" name="noise_mean" value="0.0" step="0.01">
+                                            </div>
+                                            <div class="col-6">
+                                                <label for="noise_std" class="form-label small">Standard Deviation (σ)</label>
+                                                <input type="number" class="form-control" id="noise_std" name="noise_std" value="0.1" step="0.01">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -280,16 +316,43 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const noiseToggle = document.getElementById('noise_enabled');
-            const noiseLow = document.getElementById('noise_low');
-            const noiseHigh = document.getElementById('noise_high');
+            const noiseParams = document.getElementById('noiseParams');
+            const uniformRadio = document.getElementById('noise_uniform');
+            const gaussianRadio = document.getElementById('noise_gaussian');
+            const uniformParams = document.getElementById('uniformParams');
+            const gaussianParams = document.getElementById('gaussianParams');
             
             function updateNoiseFields() {
                 const enabled = noiseToggle.checked;
-                noiseLow.disabled = !enabled;
-                noiseHigh.disabled = !enabled;
+                noiseParams.style.display = enabled ? 'block' : 'none';
+                
+                if (enabled) {
+                    updateNoiseTypeVisibility();
+                }
+            }
+            
+            function updateNoiseTypeVisibility() {
+                if (uniformRadio.checked) {
+                    uniformParams.style.display = 'block';
+                    gaussianParams.style.display = 'none';
+                    document.getElementById('noise_low').disabled = false;
+                    document.getElementById('noise_high').disabled = false;
+                    document.getElementById('noise_mean').disabled = true;
+                    document.getElementById('noise_std').disabled = true;
+                } else {
+                    uniformParams.style.display = 'none';
+                    gaussianParams.style.display = 'block';
+                    document.getElementById('noise_low').disabled = true;
+                    document.getElementById('noise_high').disabled = true;
+                    document.getElementById('noise_mean').disabled = false;
+                    document.getElementById('noise_std').disabled = false;
+                }
             }
             
             noiseToggle.addEventListener('change', updateNoiseFields);
+            uniformRadio.addEventListener('change', updateNoiseTypeVisibility);
+            gaussianRadio.addEventListener('change', updateNoiseTypeVisibility);
+            
             updateNoiseFields();
         });
     </script>
