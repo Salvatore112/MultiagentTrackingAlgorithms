@@ -84,3 +84,59 @@ class CustomAlgorithm(models.Model):
         if self.file:
             self.file.delete(save=False)
         super().delete(*args, **kwargs)
+
+
+class SimulationConfig(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='configs')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    # Simulation parameters
+    duration = models.FloatField(default=50)
+    num_sensors = models.IntegerField(default=3)
+    num_linear_targets = models.IntegerField(default=2)
+    num_random_targets = models.IntegerField(default=2)
+    num_runs = models.IntegerField(default=1)
+    
+    # Algorithm selection
+    algorithms = models.JSONField(default=list)
+    
+    # Noise parameters
+    noise_enabled = models.BooleanField(default=False)
+    noise_type = models.CharField(max_length=20, default='uniform')
+    noise_low = models.FloatField(default=-0.1)
+    noise_high = models.FloatField(default=0.1)
+    noise_mean = models.FloatField(default=0.0)
+    noise_std = models.FloatField(default=0.1)
+    
+    # L-Line configuration
+    lline_config = models.JSONField(default=dict)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['user', 'name']
+    
+    def __str__(self):
+        return f"{self.name} (by {self.user.username})"
+    
+    def to_params_dict(self):
+        """Convert config to params dict for simulation"""
+        return {
+            'duration': self.duration,
+            'num_sensors': self.num_sensors,
+            'num_linear_targets': self.num_linear_targets,
+            'num_random_targets': self.num_random_targets,
+            'algorithms': self.algorithms,
+            'noise_enabled': self.noise_enabled,
+            'noise_type': self.noise_type,
+            'noise_low': self.noise_low,
+            'noise_high': self.noise_high,
+            'noise_mean': self.noise_mean,
+            'noise_std': self.noise_std,
+            'num_runs': self.num_runs,
+            'lline_config': self.lline_config,
+        }

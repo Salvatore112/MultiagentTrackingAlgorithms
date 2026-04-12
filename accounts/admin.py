@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, CustomAlgorithm
+from .models import User, CustomAlgorithm, SimulationConfig
 
 
 class CustomUserAdmin(UserAdmin):
@@ -19,3 +19,13 @@ class CustomAlgorithmAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CustomAlgorithm, CustomAlgorithmAdmin)
+
+
+class SimulationConfigAdmin(admin.ModelAdmin):
+    list_display = ('name', 'user', 'created_at', 'updated_at')
+    list_filter = ('user', 'created_at')
+    search_fields = ('name', 'user__username', 'description')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+
+
+admin.site.register(SimulationConfig, SimulationConfigAdmin)

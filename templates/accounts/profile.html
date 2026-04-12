@@ -15,11 +15,15 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
-        .algorithm-card {
+        .algorithm-card, .config-card {
             transition: transform 0.2s;
         }
-        .algorithm-card:hover {
+        .algorithm-card:hover, .config-card:hover {
             transform: translateY(-5px);
+        }
+        .config-select {
+            max-height: 300px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -48,7 +52,8 @@
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h5 class="card-title">Quick Actions</h5>
-                                <a href="{% url 'accounts:upload_algorithm' %}" class="btn btn-success w-100">Upload New Algorithm</a>
+                                <a href="{% url 'accounts:upload_algorithm' %}" class="btn btn-success w-100 mb-2">Upload New Algorithm</a>
+                                <a href="{% url 'accounts:save_config' %}" class="btn btn-info w-100">Save Current Configuration</a>
                             </div>
                         </div>
                     </div>
@@ -66,7 +71,7 @@
                 {% endif %}
                 
                 {% if algorithms %}
-                    <div class="row">
+                    <div class="row mb-5">
                         {% for algorithm in algorithms %}
                             <div class="col-md-6 col-lg-4 mb-3">
                                 <div class="card algorithm-card">
@@ -110,9 +115,98 @@
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div class="alert alert-info">
+                    <div class="alert alert-info mb-4">
                         You haven't uploaded any custom algorithms yet. 
                         <a href="{% url 'accounts:upload_algorithm' %}" class="alert-link">Upload your first algorithm!</a>
+                    </div>
+                {% endif %}
+                
+                <h3 class="mb-3">Saved Configurations</h3>
+                
+                {% if configs %}
+                    <form method="post" action="{% url 'accounts:run_multiple_configs' %}" id="multiConfigForm">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="selectAll">
+                                            <label class="form-check-label" for="selectAll">Select All</label>
+                                        </div>
+                                        <hr>
+                                        <div class="config-select">
+                                            {% for config in configs %}
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input config-checkbox" type="checkbox" name="config_ids" value="{{ config.id }}" id="config_{{ config.id }}">
+                                                    <label class="form-check-label" for="config_{{ config.id }}">
+                                                        <strong>{{ config.name }}</strong>
+                                                        {% if config.description %}
+                                                            <br><small class="text-muted">{{ config.description|truncatechars:50 }}</small>
+                                                        {% endif %}
+                                                        <br><small class="text-muted">Created: {{ config.created_at|date:"Y-m-d H:i" }}</small>
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="mt-3">
+                                            <button type="submit" class="btn btn-primary">Run Selected Configurations</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="row">
+                        {% for config in configs %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card config-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ config.name }}</h5>
+                                        {% if config.description %}
+                                            <p class="card-text">{{ config.description|truncatechars:100 }}</p>
+                                        {% endif %}
+                                        <p class="card-text text-muted small">
+                                            Created: {{ config.created_at|date:"Y-m-d H:i" }}<br>
+                                            Sensors: {{ config.num_sensors }}, Targets: {{ config.num_linear_targets|add:config.num_random_targets }}<br>
+                                            Algorithms: {{ config.algorithms|join:", " }}
+                                        </p>
+                                        <div class="btn-group w-100" role="group">
+                                            <a href="{% url 'accounts:run_config' config.id %}" class="btn btn-sm btn-success">Run</a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfigModal{{ config.id }}">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Delete Config Modal -->
+                            <div class="modal fade" id="deleteConfigModal{{ config.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Configuration</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete "{{ config.name }}"?</p>
+                                            <p class="text-danger">This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <a href="{% url 'accounts:delete_config' config.id %}" class="btn btn-danger">Delete</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        You haven't saved any simulation configurations yet. 
+                        <a href="{% url 'simulations:setup' %}" class="alert-link">Create and save a configuration!</a>
                     </div>
                 {% endif %}
             </div>
@@ -120,5 +214,11 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('selectAll')?.addEventListener('change', function(e) {
+            const checkboxes = document.querySelectorAll('.config-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+    </script>
 </body>
 </html>

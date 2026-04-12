@@ -73,6 +73,12 @@
                     </div>
                 </div>
 
+                {% if config_name %}
+                    <div class="alert alert-info mb-4">
+                        Running saved configuration: <strong>{{ config_name }}</strong>
+                    </div>
+                {% endif %}
+
                 {% if num_runs > 1 %}
                 <div class="run-selector card mb-4">
                     <div class="card-body">

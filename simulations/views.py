@@ -88,6 +88,8 @@ def setup_view(request: HttpRequest) -> HttpResponse:
         }
 
         request.session["simulation_params"] = simulation_params
+        if "single_config_name" in request.session:
+            del request.session["single_config_name"]
 
         return HttpResponseRedirect(reverse("simulations:results"))
 
@@ -224,6 +226,8 @@ def results_view(request: HttpRequest) -> HttpResponse:
                 lline_config,
             )
 
+    config_name = request.session.get("single_config_name", None)
+    
     context: Dict[str, Any] = {
         "plots": plots_data,
         "aggregated_plots": aggregated_plots,
@@ -237,6 +241,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
         "run_range": range(num_runs),
         "lline_config": lline_config,
         "user": request.user,
+        "config_name": config_name,
     }
 
     if (selected_sensor is not None and selected_sensor != "") or (
@@ -262,6 +267,115 @@ def results_view(request: HttpRequest) -> HttpResponse:
         context["selected_target"] = target_int
 
     return render(request, "simulations/results.html", context)
+
+
+def comparison_results_view(request: HttpRequest) -> HttpResponse:
+    multiple_configs = request.session.get("multiple_configs", [])
+    
+    if not multiple_configs:
+        return HttpResponseRedirect(reverse("simulations:setup"))
+    
+    all_config_results = []
+    
+    for config_data in multiple_configs:
+        config_name = config_data['name']
+        params = config_data['params']
+        
+        duration = params.get("duration", 50)
+        num_sensors = params.get("num_sensors", 3)
+        num_linear_targets = params.get("num_linear_targets", 2)
+        num_random_targets = params.get("num_random_targets", 2)
+        algorithms = params.get("algorithms", ["original_spsa"])
+        noise_enabled = params.get("noise_enabled", False)
+        noise_type = params.get("noise_type", "uniform")
+        noise_low = params.get("noise_low", -0.1)
+        noise_high = params.get("noise_high", 0.1)
+        noise_mean = params.get("noise_mean", 0.0)
+        noise_std = params.get("noise_std", 0.1)
+        num_runs = params.get("num_runs", 1)
+        lline_config = params.get("lline_config", {})
+        
+        noise_config = None
+        if noise_enabled:
+            if noise_type == "uniform":
+                noise_config = {"type": "uniform", "low": noise_low, "high": noise_high}
+            elif noise_type == "gaussian":
+                noise_config = {"type": "gaussian", "mean": noise_mean, "std": noise_std}
+        
+        all_aggregated_errors = {algo: [] for algo in algorithms}
+        
+        for run_id in range(num_runs):
+            sim = Simulation(duration=duration, time_step=1.0, noise_config=noise_config)
+            
+            for i in range(num_sensors):
+                sim.add_uniform_sensor(i, area_size=50)
+            
+            target_id = 0
+            for i in range(num_linear_targets):
+                sim.add_linear_target(target_id, area_size=50)
+                target_id += 1
+            
+            for i in range(num_random_targets):
+                sim.add_random_walk_target(target_id, area_size=50)
+                target_id += 1
+            
+            sim.run_simulation()
+            spsa_input = sim.get_spsa_input_data()
+            
+            for algorithm_name in algorithms:
+                algorithm_config = {
+                    "sensors_positions": spsa_input["sensors_positions"],
+                    "true_targets_position": spsa_input["data"][0][0],
+                    "distances": spsa_input["data"][0][1],
+                    "init_coords": spsa_input["init_coords"],
+                }
+                
+                algorithm_instance = get_algorithm_instance(
+                    algorithm_name, 
+                    algorithm_config, 
+                    request.user if request.user.is_authenticated else None
+                )
+                
+                if algorithm_instance:
+                    try:
+                        results = algorithm_instance.run_n_iterations(spsa_input["data"])
+                        
+                        errors_over_time = []
+                        for time_iter in results.values():
+                            true_positions = time_iter[0]
+                            estimates = time_iter[1]
+                            iteration_errors = []
+                            for target_id, true_pos in true_positions.items():
+                                sensor_estimates = estimates[target_id]
+                                for sensor_est in sensor_estimates.values():
+                                    error = np.linalg.norm(sensor_est - true_pos)
+                                    iteration_errors.append(error)
+                            if iteration_errors:
+                                errors_over_time.append(np.mean(iteration_errors))
+                        
+                        if errors_over_time:
+                            all_aggregated_errors[algorithm_name].append(errors_over_time)
+                    except Exception as e:
+                        print(f"Error running {algorithm_name}: {e}")
+        
+        comparison_plots = generate_comparison_plots(all_aggregated_errors, algorithms, config_name, lline_config)
+        
+        all_config_results.append({
+            'name': config_name,
+            'params': params,
+            'plots': comparison_plots,
+            'algorithms': algorithms,
+        })
+    
+    if "multiple_configs" in request.session:
+        del request.session["multiple_configs"]
+    if "single_config_name" in request.session:
+        del request.session["single_config_name"]
+    
+    return render(request, "simulations/comparison_results.html", {
+        'config_results': all_config_results,
+        'user': request.user,
+    })
 
 
 def generate_plots(
@@ -1153,4 +1267,79 @@ def generate_individual_plots(
     plots["individual_convergence"] = base64.b64encode(buffer.getvalue()).decode()
     plt.close()
 
+    return plots
+
+
+def generate_comparison_plots(
+    aggregated_errors: Dict[str, List[List[float]]],
+    algorithms: List[str],
+    config_name: str,
+    lline_config: Dict[str, bool],
+) -> Dict[str, str]:
+    plots = {}
+    
+    plt.figure(figsize=(12, 8))
+    
+    colors = plt.cm.tab10(np.linspace(0, 1, len(algorithms)))
+    
+    for idx, algorithm_name in enumerate(algorithms):
+        if algorithm_name not in aggregated_errors or not aggregated_errors[algorithm_name]:
+            continue
+        
+        all_run_errors = aggregated_errors[algorithm_name]
+        min_length = min(len(errors) for errors in all_run_errors)
+        all_run_errors = [errors[:min_length] for errors in all_run_errors]
+        
+        mean_errors = np.mean(all_run_errors, axis=0)
+        std_errors = np.std(all_run_errors, axis=0)
+        
+        iterations = range(len(mean_errors))
+        
+        plt.plot(
+            iterations,
+            mean_errors,
+            color=colors[idx],
+            label=algorithm_name,
+            linewidth=2,
+        )
+        plt.fill_between(
+            iterations,
+            mean_errors - std_errors,
+            mean_errors + std_errors,
+            color=colors[idx],
+            alpha=0.2,
+        )
+        
+        if lline_config.get(algorithm_name, False):
+            final_mean_error = mean_errors[-1]
+            plt.axhline(
+                y=final_mean_error,
+                color=colors[idx],
+                linestyle=":",
+                alpha=0.7,
+                linewidth=2,
+            )
+            plt.text(
+                iterations[-1],
+                final_mean_error * 1.05,
+                f"L={final_mean_error:.3f}",
+                color=colors[idx],
+                fontsize=10,
+                ha="right",
+                fontweight="bold",
+            )
+    
+    plt.xlabel("Iteration (including initial)")
+    plt.ylabel("Average Error (Mean ± Std)")
+    plt.title(f"Convergence Comparison - {config_name}")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
+    buffer.seek(0)
+    plots["comparison"] = base64.b64encode(buffer.getvalue()).decode()
+    plt.close()
+    
     return plots
