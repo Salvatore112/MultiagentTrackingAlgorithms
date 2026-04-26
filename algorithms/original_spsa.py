@@ -11,6 +11,7 @@ class Original_SPSA():
         true_targets_position: Optional[Dict[int, np.ndarray]] = None,
         distances: Optional[Dict[int, Dict[int, float]]] = None,
         init_coords: Optional[Dict[int, Dict[int, np.ndarray]]] = None,
+        adjacency_matrix: Optional[List[List[int]]] = None,
     ) -> None:
         self.number_of_sensors: int = len(sensors_positions.items())
         self.sensor_ids: Set[int] = {i for i in range(self.number_of_sensors)}
@@ -39,6 +40,11 @@ class Original_SPSA():
         self.Delta_abs_value: float = 1 / np.sqrt(self.dimensions)
 
         self.weight = None
+        
+        if adjacency_matrix is None:
+            self.adjacency_matrix = [[1 if i != j else 0 for j in range(self.number_of_sensors)] for i in range(self.number_of_sensors)]
+        else:
+            self.adjacency_matrix = adjacency_matrix
 
     def _generate_matrix(self, n: int) -> np.ndarray:
         raw_mat: np.ndarray = np.random.rand(n, n)
@@ -197,6 +203,11 @@ class Original_SPSA():
     ) -> Dict[int, List[int]]:
         neibors_mat: np.ndarray = (weight != 0).astype(int)
         np.fill_diagonal(neibors_mat, 0)
+        
+        for i in range(self.number_of_sensors):
+            for j in range(self.number_of_sensors):
+                if self.adjacency_matrix[i][j] == 0:
+                    neibors_mat[i, j] = 0
 
         neibors: Dict[int, List[int]] = {}
         for sensor_id in self.sensor_ids:

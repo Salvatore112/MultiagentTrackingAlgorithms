@@ -133,6 +133,26 @@
                         </div>
                     </div>
                     
+                    <hr>
+                    <h5 class="mb-3">Sensor Connectivity (Adjacency Matrix)</h5>
+                    
+                    <div class="mb-3">
+                        <label for="id_adjacency_sparsity" class="form-label">Sparsity Level</label>
+                        <input type="number" name="adjacency_sparsity" id="id_adjacency_sparsity" min="0" max="100" step="1" class="form-control" value="100">
+                        <div class="form-text">100% = fully connected, 0% = completely disconnected (sensors only communicate with themselves). Generated randomly.</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="custom_matrix_toggle">
+                        <label class="form-check-label" for="custom_matrix_toggle">Use custom adjacency matrix (overrides sparsity)</label>
+                    </div>
+                    
+                    <div id="customMatrixDiv" style="display: none;">
+                        <label class="form-label">Custom Adjacency Matrix (comma-separated rows)</label>
+                        <textarea name="adjacency_matrix" id="adjacency_matrix" class="form-control" rows="4" placeholder="Example for 3 sensors:&#10;0,1,1&#10;1,0,1&#10;1,1,0" style="font-family: monospace;"></textarea>
+                        <div class="form-text">1 = connected, 0 = not connected. Diagonal should be 0 (no self-connection).</div>
+                    </div>
+                    
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">Save Configuration</button>
                         <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Cancel</a>
@@ -150,6 +170,12 @@
             const noiseType = document.getElementById('id_noise_type');
             const uniformParams = document.getElementById('uniformParams');
             const gaussianParams = document.getElementById('gaussianParams');
+            
+            const sparsityInput = document.getElementById('id_adjacency_sparsity');
+            const customToggle = document.getElementById('custom_matrix_toggle');
+            const customDiv = document.getElementById('customMatrixDiv');
+            const customTextarea = document.getElementById('adjacency_matrix');
+            const numSensors = document.getElementById('id_num_sensors');
             
             function updateNoiseFields() {
                 const enabled = noiseToggle.checked;
@@ -170,10 +196,42 @@
                 }
             }
             
+            function updateMatrixFields() {
+                const customEnabled = customToggle.checked;
+                customDiv.style.display = customEnabled ? 'block' : 'none';
+                sparsityInput.disabled = customEnabled;
+                
+                if (customEnabled) {
+                    generateDefaultMatrix();
+                } else {
+                    customTextarea.value = '';
+                }
+            }
+            
+            function generateDefaultMatrix() {
+                const n = parseInt(numSensors.value) || 3;
+                let matrix = '';
+                for (let i = 0; i < n; i++) {
+                    let row = [];
+                    for (let j = 0; j < n; j++) {
+                        row.push(i === j ? '0' : '1');
+                    }
+                    matrix += row.join(',') + '\n';
+                }
+                customTextarea.value = matrix.trim();
+            }
+            
             noiseToggle.addEventListener('change', updateNoiseFields);
             noiseType.addEventListener('change', updateNoiseTypeVisibility);
+            customToggle.addEventListener('change', updateMatrixFields);
+            numSensors.addEventListener('change', function() {
+                if (customToggle.checked) {
+                    generateDefaultMatrix();
+                }
+            });
             
             updateNoiseFields();
+            updateMatrixFields();
         });
     </script>
 </body>

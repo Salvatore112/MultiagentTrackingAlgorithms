@@ -136,6 +136,28 @@ def save_config(request):
                 lline_config[algo] = request.POST.get(f'lline_{algo}') == 'on'
             config.lline_config = lline_config
             
+            adjacency_matrix_str = request.POST.get('adjacency_matrix', '')
+            if adjacency_matrix_str:
+                try:
+                    rows = adjacency_matrix_str.strip().split('\n')
+                    adjacency_matrix = []
+                    for row in rows:
+                        adjacency_matrix.append([int(x.strip()) for x in row.split(',')])
+                    if len(adjacency_matrix) == config.num_sensors:
+                        valid = True
+                        for row in adjacency_matrix:
+                            if len(row) != config.num_sensors:
+                                valid = False
+                                break
+                        if valid:
+                            config.adjacency_matrix = adjacency_matrix
+                            config.adjacency_sparsity = None
+                except:
+                    pass
+            
+            if config.adjacency_sparsity is not None and config.adjacency_sparsity < 100:
+                config.adjacency_matrix = None
+            
             config.save()
             messages.success(request, f'Configuration "{config.name}" saved successfully!')
             return redirect('accounts:profile')
@@ -163,8 +185,7 @@ def save_config(request):
         
         form = SimulationConfigForm(initial=initial_data, user=request.user)
     
-    # Get available algorithms for template
-    available_algorithms = ['original_spsa', 'accelerated_spsa']
+    available_algorithms = ['original_spsa', 'accelerated_spsa', 'distributed_kalman_filter']
     custom_algorithms = list(request.user.algorithms.filter(is_active=True).values_list('name', flat=True))
     all_algorithms = available_algorithms + custom_algorithms
     

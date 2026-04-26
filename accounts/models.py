@@ -2,6 +2,7 @@ import os
 import uuid
 import importlib.util
 import sys
+import random
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -92,17 +93,14 @@ class SimulationConfig(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     
-    # Simulation parameters
     duration = models.FloatField(default=50)
     num_sensors = models.IntegerField(default=3)
     num_linear_targets = models.IntegerField(default=2)
     num_random_targets = models.IntegerField(default=2)
     num_runs = models.IntegerField(default=1)
     
-    # Algorithm selection
     algorithms = models.JSONField(default=list)
     
-    # Noise parameters
     noise_enabled = models.BooleanField(default=False)
     noise_type = models.CharField(max_length=20, default='uniform')
     noise_low = models.FloatField(default=-0.1)
@@ -110,8 +108,9 @@ class SimulationConfig(models.Model):
     noise_mean = models.FloatField(default=0.0)
     noise_std = models.FloatField(default=0.1)
     
-    # L-Line configuration
     lline_config = models.JSONField(default=dict)
+    adjacency_matrix = models.JSONField(default=None, null=True, blank=True)
+    adjacency_sparsity = models.FloatField(default=100.0, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -123,8 +122,35 @@ class SimulationConfig(models.Model):
     def __str__(self):
         return f"{self.name} (by {self.user.username})"
     
+    def generate_adjacency_matrix(self):
+        if self.adjacency_matrix is not None:
+            return self.adjacency_matrix
+        
+        if self.adjacency_sparsity is not None and self.adjacency_sparsity < 100:
+            sparsity = self.adjacency_sparsity / 100.0
+            matrix = []
+            for i in range(self.num_sensors):
+                row = []
+                for j in range(self.num_sensors):
+                    if i == j:
+                        row.append(0)
+                    else:
+                        if random.random() < sparsity:
+                            row.append(1)
+                        else:
+                            row.append(0)
+                matrix.append(row)
+            
+            for i in range(self.num_sensors):
+                for j in range(self.num_sensors):
+                    if matrix[i][j] == 1:
+                        matrix[j][i] = 1
+            
+            return matrix
+        
+        return [[1 if i != j else 0 for j in range(self.num_sensors)] for i in range(self.num_sensors)]
+    
     def to_params_dict(self):
-        """Convert config to params dict for simulation"""
         return {
             'duration': self.duration,
             'num_sensors': self.num_sensors,
@@ -139,4 +165,5 @@ class SimulationConfig(models.Model):
             'noise_std': self.noise_std,
             'num_runs': self.num_runs,
             'lline_config': self.lline_config,
+            'adjacency_matrix': self.generate_adjacency_matrix(),
         }

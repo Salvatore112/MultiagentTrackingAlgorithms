@@ -85,11 +85,20 @@ class RenameAlgorithmForm(forms.Form):
 
 
 class SimulationConfigForm(forms.ModelForm):
+    adjacency_sparsity = forms.FloatField(
+        required=False,
+        min_value=0,
+        max_value=100,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': 1}),
+        help_text='100% = fully connected, 0% = no connections (except self)'
+    )
+    
     class Meta:
         model = SimulationConfig
         fields = ('name', 'description', 'duration', 'num_sensors', 'num_linear_targets', 
                   'num_random_targets', 'num_runs', 'algorithms', 'noise_enabled', 
-                  'noise_type', 'noise_low', 'noise_high', 'noise_mean', 'noise_std')
+                  'noise_type', 'noise_low', 'noise_high', 'noise_mean', 'noise_std',
+                  'adjacency_sparsity')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Configuration name'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Description (optional)'}),
@@ -110,7 +119,9 @@ class SimulationConfigForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if user:
-            available_algorithms = ['original_spsa', 'accelerated_spsa']
+            available_algorithms = ['original_spsa', 'accelerated_spsa', 'distributed_kalman_filter']
             custom_algorithms = list(user.algorithms.filter(is_active=True).values_list('name', flat=True))
             all_algorithms = available_algorithms + custom_algorithms
             self.fields['algorithms'].choices = [(algo, algo) for algo in all_algorithms]
+        
+        self.fields['adjacency_sparsity'].widget.attrs['placeholder'] = '100 (fully connected)'

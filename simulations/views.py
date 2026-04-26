@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import io
 import base64
+import random
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
 from django.urls import reverse
@@ -14,6 +15,35 @@ from algorithms.accelerated_spsa import Accelerated_SPSA
 from algorithms.distributed_kalman_filter import Distributed_Kalman_Filter
 
 matplotlib.use("Agg")
+
+
+def generate_adjacency_matrix(num_sensors: int, sparsity_percent: float = 100.0) -> List[List[int]]:
+    if sparsity_percent >= 100.0:
+        return [[1 if i != j else 0 for j in range(num_sensors)] for i in range(num_sensors)]
+    
+    if sparsity_percent <= 0.0:
+        return [[0 for j in range(num_sensors)] for i in range(num_sensors)]
+    
+    probability = sparsity_percent / 100.0
+    matrix = []
+    for i in range(num_sensors):
+        row = []
+        for j in range(num_sensors):
+            if i == j:
+                row.append(0)
+            else:
+                if random.random() < probability:
+                    row.append(1)
+                else:
+                    row.append(0)
+        matrix.append(row)
+    
+    for i in range(num_sensors):
+        for j in range(num_sensors):
+            if matrix[i][j] == 1:
+                matrix[j][i] = 1
+    
+    return matrix
 
 
 def get_algorithm_instance(algorithm_name, algorithm_config, user=None):
@@ -73,6 +103,26 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             else:
                 lline_config[algo] = request.POST.get(f"{algo}_lline") == "on"
 
+        adjacency_sparsity: float = float(request.POST.get("adjacency_sparsity", 100))
+        
+        adjacency_matrix_str = request.POST.get("adjacency_matrix", "")
+        adjacency_matrix = None
+        if adjacency_matrix_str:
+            try:
+                rows = adjacency_matrix_str.strip().split('\n')
+                adjacency_matrix = []
+                for row in rows:
+                    adjacency_matrix.append([int(x.strip()) for x in row.split(',')])
+                if len(adjacency_matrix) != num_sensors:
+                    adjacency_matrix = None
+                else:
+                    for row in adjacency_matrix:
+                        if len(row) != num_sensors:
+                            adjacency_matrix = None
+                            break
+            except:
+                adjacency_matrix = None
+
         simulation_params = {
             "duration": duration,
             "num_sensors": num_sensors,
@@ -87,6 +137,8 @@ def setup_view(request: HttpRequest) -> HttpResponse:
             "noise_std": noise_std,
             "num_runs": num_runs,
             "lline_config": lline_config,
+            "adjacency_matrix": adjacency_matrix,
+            "adjacency_sparsity": adjacency_sparsity,
         }
 
         request.session["simulation_params"] = simulation_params
@@ -128,6 +180,8 @@ def results_view(request: HttpRequest) -> HttpResponse:
     noise_std: float = params.get("noise_std", 0.1)
     num_runs: int = params.get("num_runs", 1)
     lline_config: Dict[str, bool] = params.get("lline_config", {})
+    adjacency_matrix: Optional[List[List[int]]] = params.get("adjacency_matrix", None)
+    adjacency_sparsity: float = params.get("adjacency_sparsity", 100.0)
 
     noise_config: Optional[Dict[str, Any]] = None
     if noise_enabled:
@@ -159,6 +213,11 @@ def results_view(request: HttpRequest) -> HttpResponse:
 
         sim.run_simulation()
         spsa_input: Dict[str, Any] = sim.get_spsa_input_data()
+        
+        if adjacency_matrix is not None:
+            spsa_input["adjacency_matrix"] = adjacency_matrix
+        else:
+            spsa_input["adjacency_matrix"] = generate_adjacency_matrix(num_sensors, adjacency_sparsity)
 
         all_initial_estimates[run_id] = spsa_input["init_coords"]
 
@@ -170,6 +229,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
                 "true_targets_position": spsa_input["data"][0][0],
                 "distances": spsa_input["data"][0][1],
                 "init_coords": spsa_input["init_coords"],
+                "adjacency_matrix": spsa_input["adjacency_matrix"],
             }
             
             algorithm_instance = get_algorithm_instance(
@@ -244,6 +304,7 @@ def results_view(request: HttpRequest) -> HttpResponse:
         "lline_config": lline_config,
         "user": request.user,
         "config_name": config_name,
+        "adjacency_sparsity": adjacency_sparsity,
     }
 
     if (selected_sensor is not None and selected_sensor != "") or (
@@ -296,6 +357,8 @@ def comparison_results_view(request: HttpRequest) -> HttpResponse:
         noise_std = params.get("noise_std", 0.1)
         num_runs = params.get("num_runs", 1)
         lline_config = params.get("lline_config", {})
+        adjacency_matrix = params.get("adjacency_matrix", None)
+        adjacency_sparsity = params.get("adjacency_sparsity", 100.0)
         
         noise_config = None
         if noise_enabled:
@@ -324,12 +387,18 @@ def comparison_results_view(request: HttpRequest) -> HttpResponse:
             sim.run_simulation()
             spsa_input = sim.get_spsa_input_data()
             
+            if adjacency_matrix is not None:
+                spsa_input["adjacency_matrix"] = adjacency_matrix
+            else:
+                spsa_input["adjacency_matrix"] = generate_adjacency_matrix(num_sensors, adjacency_sparsity)
+            
             for algorithm_name in algorithms:
                 algorithm_config = {
                     "sensors_positions": spsa_input["sensors_positions"],
                     "true_targets_position": spsa_input["data"][0][0],
                     "distances": spsa_input["data"][0][1],
                     "init_coords": spsa_input["init_coords"],
+                    "adjacency_matrix": spsa_input["adjacency_matrix"],
                 }
                 
                 algorithm_instance = get_algorithm_instance(

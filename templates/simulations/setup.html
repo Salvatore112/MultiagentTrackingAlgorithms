@@ -149,6 +149,27 @@
         .btn-outline-primary, .btn-outline-danger {
             font-weight: 500;
         }
+        .adjacency-matrix-section {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .matrix-input {
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+        .connectivity-option {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .connectivity-option.selected {
+            background-color: #e7f1ff;
+            border-color: #0d6efd;
+        }
     </style>
 </head>
 <body>
@@ -268,6 +289,34 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="adjacency-matrix-section mt-4">
+                                <h6 class="mb-3">Sensor Connectivity</h6>
+                                
+                                <div class="connectivity-option" id="sparsityOption">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="connectivity_mode" id="sparsity_mode" value="sparsity" checked>
+                                        <label class="form-check-label fw-bold" for="sparsity_mode">Generate random sensor topology</label>
+                                    </div>
+                                    <div class="mt-2 ms-4">
+                                        <label for="adjacency_sparsity" class="form-label">Density percentage</label>
+                                        <input type="number" class="form-control" id="adjacency_sparsity" name="adjacency_sparsity" min="0" max="100" step="1" value="100" style="width: 150px;">
+                                        <div class="form-text">100% = fully connected, 0% = completely disconnected (sensors only communicate with themselves). Generated randomly.</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="connectivity-option mt-3" id="customMatrixOption">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="connectivity_mode" id="custom_mode" value="custom">
+                                        <label class="form-check-label fw-bold" for="custom_mode">Use custom adjacency matrix</label>
+                                    </div>
+                                    <div class="mt-2 ms-4" id="customMatrixDiv" style="display: none;">
+                                        <label class="form-label">Adjacency Matrix (comma-separated rows)</label>
+                                        <textarea name="adjacency_matrix" id="adjacency_matrix" class="form-control matrix-input" rows="4" placeholder="Example for 3 sensors:&#10;0,1,1&#10;1,0,1&#10;1,1,0" style="font-family: monospace;"></textarea>
+                                        <div class="form-text">1 = connected, 0 = not connected. Diagonal should be 0 (no self-connection).</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="col-md-1 d-flex justify-content-center">
@@ -326,6 +375,13 @@
             const uniformParams = document.getElementById('uniformParams');
             const gaussianParams = document.getElementById('gaussianParams');
             
+            const sparsityMode = document.getElementById('sparsity_mode');
+            const customMode = document.getElementById('custom_mode');
+            const sparsityInput = document.getElementById('adjacency_sparsity');
+            const customDiv = document.getElementById('customMatrixDiv');
+            const customTextarea = document.getElementById('adjacency_matrix');
+            const numSensors = document.getElementById('num_sensors');
+            
             function updateNoiseFields() {
                 const enabled = noiseToggle.checked;
                 noiseParams.style.display = enabled ? 'block' : 'none';
@@ -353,11 +409,49 @@
                 }
             }
             
+            function updateConnectivityFields() {
+                if (sparsityMode.checked) {
+                    sparsityInput.disabled = false;
+                    customDiv.style.display = 'none';
+                    customTextarea.disabled = true;
+                    document.getElementById('sparsityOption').classList.add('selected');
+                    document.getElementById('customMatrixOption').classList.remove('selected');
+                } else {
+                    sparsityInput.disabled = true;
+                    customDiv.style.display = 'block';
+                    customTextarea.disabled = false;
+                    generateDefaultMatrix();
+                    document.getElementById('customMatrixOption').classList.add('selected');
+                    document.getElementById('sparsityOption').classList.remove('selected');
+                }
+            }
+            
+            function generateDefaultMatrix() {
+                const n = parseInt(numSensors.value) || 3;
+                let matrix = '';
+                for (let i = 0; i < n; i++) {
+                    let row = [];
+                    for (let j = 0; j < n; j++) {
+                        row.push(i === j ? '0' : '1');
+                    }
+                    matrix += row.join(',') + '\n';
+                }
+                customTextarea.value = matrix.trim();
+            }
+            
             noiseToggle.addEventListener('change', updateNoiseFields);
             uniformRadio.addEventListener('change', updateNoiseTypeVisibility);
             gaussianRadio.addEventListener('change', updateNoiseTypeVisibility);
+            sparsityMode.addEventListener('change', updateConnectivityFields);
+            customMode.addEventListener('change', updateConnectivityFields);
+            numSensors.addEventListener('change', function() {
+                if (customMode.checked) {
+                    generateDefaultMatrix();
+                }
+            });
             
             updateNoiseFields();
+            updateConnectivityFields();
         });
     </script>
 </body>
