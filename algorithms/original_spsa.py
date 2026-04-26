@@ -2,9 +2,10 @@ import numpy as np
 from random import random, sample
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Optional, Any
+from .tracking_algorithm import TrackingAlgorithm
 
 
-class Original_SPSA():
+class Original_SPSA(TrackingAlgorithm):
     def __init__(
         self,
         sensors_positions: Optional[Dict[int, np.ndarray]] = None,
